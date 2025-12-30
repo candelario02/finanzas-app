@@ -102,7 +102,7 @@ function App() {
 
         <div className="input-section">
           <div className="quick-tags">
-            {["GNV", "Comida", "Diversion", "Generé"].map(cat => (
+            {["GNV", "Comida", "Diversión", "Generé"].map(cat => (
               <button key={cat} onClick={() => setNombre(cat)} className="tag-btn">{cat}</button>
             ))}
           </div>
