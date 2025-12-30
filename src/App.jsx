@@ -102,13 +102,14 @@ function App() {
 
         <div className="input-section">
           <div className="quick-tags">
-            {["Pasajes", "Almuerzo", "Venta", "Cena"].map(cat => (
+            {["GNV", "Comida", "Diversion", "Generé"].map(cat => (
               <button key={cat} onClick={() => setNombre(cat)} className="tag-btn">{cat}</button>
             ))}
           </div>
           <input type="text" placeholder="¿Qué registramos?" value={nombre} onChange={e => setNombre(e.target.value)} />
           <input type="number" placeholder="Monto S/" value={monto} onChange={e => setMonto(e.target.value)} />
           <div className="btn-group-direct">
+
             <button onClick={() => registrar('ingreso')} className="btn-direct in">💰 Ingreso</button>
             <button onClick={() => registrar('gasto')} className="btn-direct out">💸 Gasto</button>
           </div>
