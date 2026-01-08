@@ -37,7 +37,7 @@ function App() {
       nombre, 
       monto: parseFloat(monto), 
       tipo, 
-      fecha: ahora.toLocaleDateString('en-CA'), // Formato YYYY-MM-DD para fácil filtrado
+      fecha: ahora.toLocaleDateString('en-CA'), 
       hora: ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setMovimientos(prev => [nuevo, ...prev]);
@@ -60,17 +60,36 @@ function App() {
     const blob = new Blob([encabezados + filas], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `finanzas_${new Date().toLocaleDateString()}.csv`;
+    link.download = `finanzas_backup.csv`;
     link.click();
   };
 
+  const importarCSV = (e) => {
+    const archivo = e.target.files[0];
+    if (!archivo) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const contenido = evt.target.result;
+      const lineas = contenido.split("\n").slice(1); // Saltar encabezado
+      const nuevosMovs = lineas.filter(l => l.trim() !== "").map(linea => {
+        const [fecha, hora, nombre, tipo, monto] = linea.split(",");
+        return { id: Math.random().toString(), fecha, hora, nombre, tipo, monto: parseFloat(monto) };
+      });
+      setMovimientos(prev => [...nuevosMovs, ...prev]);
+      alert("¡Datos importados con éxito!");
+    };
+    reader.readAsText(archivo);
+  };
+
   /* =========================================
-     3. FILTROS Y CÁLCULOS
+     3. FILTROS (CORREGIDOS PARA DATOS VIEJOS)
      ========================================= */
   const datosFiltrados = movimientos
     .filter(m => {
       if (vistaMensual) return true;
-      return m.fecha === fechaFiltro;
+      // Intenta comparar con el formato nuevo (YYYY-MM-DD) y el viejo
+      const fechaLocalFiltro = new Date(fechaFiltro + "T00:00:00").toLocaleDateString();
+      return m.fecha === fechaFiltro || m.fecha === fechaLocalFiltro;
     })
     .filter(m => m.nombre.toLowerCase().includes(busqueda.toLowerCase()));
 
@@ -78,7 +97,6 @@ function App() {
   const totalOut = datosFiltrados.filter(m => m.tipo === 'gasto').reduce((acc, m) => acc + m.monto, 0);
   const ahorro = totalIn - totalOut;
 
-  // Gráfico
   const totalG = totalIn + totalOut + (ahorro > 0 ? ahorro : 0);
   const pOut = totalG > 0 ? (totalOut / totalG) * 360 : 0;
   const pIn = totalG > 0 ? (totalIn / totalG) * 360 : 0;
@@ -95,9 +113,12 @@ function App() {
         <header className="app-header">
           <h2>{vistaMensual ? "Todo el Mes" : "Detalle Día"}</h2>
           <div className="header-btns">
+            <label className="btn-switch" style={{cursor:'pointer'}}>
+              📤 <input type="file" accept=".csv" onChange={importarCSV} style={{display:'none'}} />
+            </label>
             <button className="btn-switch" onClick={exportarCSV}>📥</button>
             <button className="btn-switch" onClick={() => setVistaMensual(!vistaMensual)}>
-              {vistaMensual ? "📅 Ver Día" : "📊 Ver Todo"}
+              {vistaMensual ? "📅 Día" : "📊 Todo"}
             </button>
           </div>
         </header>
@@ -113,7 +134,7 @@ function App() {
             <div className="inner-circle">
               <div className="chart-info">
                 <p>S/ {ahorro.toFixed(2)}</p>
-                <span>{vistaMensual ? "Balance Total" : "Balance Día"}</span>
+                <span>Balance</span>
               </div>
             </div>
           </div>
@@ -125,17 +146,9 @@ function App() {
         </div>
 
         <div className="input-section">
-          <small style={{opacity: 0.5, fontSize: '0.6rem'}}>Mantén presionado para editar etiquetas</small>
           <div className="quick-tags">
             {tags.map((cat, index) => (
-              <button 
-                key={index} 
-                onClick={() => setNombre(cat)} 
-                onContextMenu={(e) => { e.preventDefault(); editarTag(index); }}
-                className="tag-btn"
-              >
-                {cat}
-              </button>
+              <button key={index} onClick={() => setNombre(cat)} onContextMenu={(e) => { e.preventDefault(); editarTag(index); }} className="tag-btn">{cat}</button>
             ))}
           </div>
           <input type="text" placeholder="¿Qué registramos?" value={nombre} onChange={e => setNombre(e.target.value)} />
@@ -147,7 +160,7 @@ function App() {
         </div>
 
         <div className="search-box">
-          <input type="text" placeholder="🔍 Buscar en esta vista..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+          <input type="text" placeholder="🔍 Buscar..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
         </div>
 
         <div className="history-list">
@@ -159,9 +172,7 @@ function App() {
                 <span>{m.fecha} · {m.hora}</span>
               </div>
               <div className="item-right">
-                <span className={`item-amount ${m.tipo}`}>
-                  {m.tipo === 'ingreso' ? '+' : '-'} S/ {m.monto.toFixed(2)}
-                </span>
+                <span className={`item-amount ${m.tipo}`}>S/ {m.monto.toFixed(2)}</span>
                 <button className="delete-btn" onClick={() => setMovimientos(prev => prev.filter(x => x.id !== m.id))}>&times;</button>
               </div>
             </div>
