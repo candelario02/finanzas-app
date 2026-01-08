@@ -253,3 +253,21 @@ input {
   opacity: 0.4;
   display: block;
 }
+
+.date-selector {
+  text-align: center;
+}
+
+.date-selector input {
+  background: #1e1e1e;
+  color: var(--accent);
+  border: 1px solid #333;
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-family: inherit;
+  font-weight: bold;
+}
+
+.btn-switch {
+  font-size: 0.9rem; /* Icono un poco más grande para el de exportar */
+}
