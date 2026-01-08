@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import './App.css';
 
 function App() {
-  /* =========================================
-     1. ESTADO Y PERSISTENCIA
-     ========================================= */
   const [movimientos, setMovimientos] = useState(() => {
     const datos = localStorage.getItem('finanzas_v7');
     return datos ? JSON.parse(datos) : [];
@@ -26,9 +24,6 @@ function App() {
     localStorage.setItem('finanzas_tags', JSON.stringify(tags));
   }, [movimientos, tags]);
 
-  /* =========================================
-     2. LÓGICA DE NEGOCIO
-     ========================================= */
   const registrar = (tipo) => {
     if (!nombre || !monto) return alert("Escribe detalle y monto");
     const ahora = new Date();
@@ -45,7 +40,7 @@ function App() {
   };
 
   const editarTag = (index) => {
-    const nuevoNombre = prompt("Nuevo nombre para la etiqueta:", tags[index]);
+    const nuevoNombre = prompt("Nuevo nombre para tu botón favorito:", tags[index]);
     if (nuevoNombre) {
       const nuevosTags = [...tags];
       nuevosTags[index] = nuevoNombre;
@@ -53,43 +48,21 @@ function App() {
     }
   };
 
-  const exportarCSV = () => {
-    if (movimientos.length === 0) return alert("No hay datos para exportar");
-    const encabezados = "Fecha,Hora,Detalle,Tipo,Monto\n";
-    const filas = movimientos.map(m => `${m.fecha},${m.hora},${m.nombre},${m.tipo},${m.monto}`).join("\n");
-    const blob = new Blob([encabezados + filas], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `finanzas_backup.csv`;
-    link.click();
+  const exportarExcel = () => {
+    if (movimientos.length === 0) return alert("No hay datos");
+    const ws = XLSX.utils.json_to_sheet(movimientos);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Finanzas");
+    XLSX.writeFile(wb, `Finanzas_${fechaFiltro}.xlsx`);
   };
 
-  const importarCSV = (e) => {
-    const archivo = e.target.files[0];
-    if (!archivo) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const contenido = evt.target.result;
-      const lineas = contenido.split("\n").slice(1); // Saltar encabezado
-      const nuevosMovs = lineas.filter(l => l.trim() !== "").map(linea => {
-        const [fecha, hora, nombre, tipo, monto] = linea.split(",");
-        return { id: Math.random().toString(), fecha, hora, nombre, tipo, monto: parseFloat(monto) };
-      });
-      setMovimientos(prev => [...nuevosMovs, ...prev]);
-      alert("¡Datos importados con éxito!");
-    };
-    reader.readAsText(archivo);
-  };
-
-  /* =========================================
-     3. FILTROS (CORREGIDOS PARA DATOS VIEJOS)
-     ========================================= */
   const datosFiltrados = movimientos
     .filter(m => {
-      if (vistaMensual) return true;
-      // Intenta comparar con el formato nuevo (YYYY-MM-DD) y el viejo
-      const fechaLocalFiltro = new Date(fechaFiltro + "T00:00:00").toLocaleDateString();
-      return m.fecha === fechaFiltro || m.fecha === fechaLocalFiltro;
+      if (vistaMensual) {
+        const mesActual = fechaFiltro.substring(0, 7);
+        return m.fecha.startsWith(mesActual);
+      }
+      return m.fecha === fechaFiltro;
     })
     .filter(m => m.nombre.toLowerCase().includes(busqueda.toLowerCase()));
 
@@ -100,6 +73,7 @@ function App() {
   const totalG = totalIn + totalOut + (ahorro > 0 ? ahorro : 0);
   const pOut = totalG > 0 ? (totalOut / totalG) * 360 : 0;
   const pIn = totalG > 0 ? (totalIn / totalG) * 360 : 0;
+  
   const graficoEstilo = {
     background: totalG > 0 
       ? `conic-gradient(#ff4757 0deg ${pOut}deg, #00d1b2 ${pOut}deg ${pOut + pIn}deg, #bb86fc ${pOut + pIn}deg 360deg)`
@@ -111,30 +85,29 @@ function App() {
       <div className="phone-screen">
         
         <header className="app-header">
-          <h2>{vistaMensual ? "Todo el Mes" : "Detalle Día"}</h2>
+          <h2>{vistaMensual ? "Resumen Mensual" : "Detalle Día"}</h2>
           <div className="header-btns">
-            <label className="btn-switch" style={{cursor:'pointer'}}>
-              📤 <input type="file" accept=".csv" onChange={importarCSV} style={{display:'none'}} />
-            </label>
-            <button className="btn-switch" onClick={exportarCSV}>📥</button>
+            <button className="btn-excel" onClick={exportarExcel}>📊 Excel</button>
             <button className="btn-switch" onClick={() => setVistaMensual(!vistaMensual)}>
-              {vistaMensual ? "📅 Día" : "📊 Todo"}
+              {vistaMensual ? "📅 Ver Día" : "🗓️ Mensual"}
             </button>
           </div>
         </header>
 
-        {!vistaMensual && (
-          <div className="date-selector">
-            <input type="date" value={fechaFiltro} onChange={(e) => setFechaFiltro(e.target.value)} />
-          </div>
-        )}
+        <div className="date-selector">
+          <input 
+            type={vistaMensual ? "month" : "date"} 
+            value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro} 
+            onChange={(e) => setFechaFiltro(e.target.value)} 
+          />
+        </div>
 
         <div className="main-card">
           <div className="circle-chart-multi" style={graficoEstilo}>
             <div className="inner-circle">
               <div className="chart-info">
                 <p>S/ {ahorro.toFixed(2)}</p>
-                <span>Balance</span>
+                <span>{vistaMensual ? "Balance Mes" : "Balance Día"}</span>
               </div>
             </div>
           </div>
@@ -146,9 +119,21 @@ function App() {
         </div>
 
         <div className="input-section">
+          <p className="edit-hint">Presiona una etiqueta para cambiarle el nombre</p>
           <div className="quick-tags">
             {tags.map((cat, index) => (
-              <button key={index} onClick={() => setNombre(cat)} onContextMenu={(e) => { e.preventDefault(); editarTag(index); }} className="tag-btn">{cat}</button>
+              <button 
+                key={index} 
+                onClick={() => setNombre(cat)} 
+                onContextMenu={(e) => { e.preventDefault(); editarTag(index); }}
+                onTouchStart={(e) => {
+                    const timer = setTimeout(() => editarTag(index), 800);
+                    e.target.addEventListener('touchend', () => clearTimeout(timer), {once: true});
+                }}
+                className="tag-btn"
+              >
+                {cat}
+              </button>
             ))}
           </div>
           <input type="text" placeholder="¿Qué registramos?" value={nombre} onChange={e => setNombre(e.target.value)} />
@@ -160,7 +145,7 @@ function App() {
         </div>
 
         <div className="search-box">
-          <input type="text" placeholder="🔍 Buscar..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+          <input type="text" placeholder="🔍 Buscar movimiento..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
         </div>
 
         <div className="history-list">
