@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import './App.css';
+import { db, auth, googleProvider } from './firebase';
+import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { 
+  collection, 
+  addDoc, 
+  query, 
+  where, 
+  onSnapshot, 
+  deleteDoc, 
+  doc 
+} from 'firebase/firestore';
 
 function App() {
-  const [movimientos, setMovimientos] = useState(() => {
-    const datos = localStorage.getItem('finanzas_v7');
-    return datos ? JSON.parse(datos) : [];
-  });
-
+  const [user, setUser] = useState(null);
+  const [movimientos, setMovimientos] = useState([]);
   const [tags, setTags] = useState(() => {
     const savedTags = localStorage.getItem('finanzas_tags');
     return savedTags ? JSON.parse(savedTags) : ["GNV", "Comida", "Diversión", "Generé"];
@@ -19,146 +27,144 @@ function App() {
   const [vistaMensual, setVistaMensual] = useState(false);
   const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
 
+  // Manejo de Usuario
   useEffect(() => {
-    localStorage.setItem('finanzas_v7', JSON.stringify(movimientos));
-    localStorage.setItem('finanzas_tags', JSON.stringify(tags));
-  }, [movimientos, tags]);
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (!u) setMovimientos([]); // Limpiar si no hay usuario
+    });
+    return () => unsub();
+  }, []);
 
-  const registrar = (tipo) => {
-    if (!nombre || !monto) return alert("Escribe detalle y monto");
+  // Manejo de Datos (Firebase)
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, "movimientos"), 
+      where("uid", "==", user.uid)
+    );
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      const docs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+      setMovimientos(docs.sort((a, b) => b.createdAt - a.createdAt));
+    }, (error) => {
+      console.error("Error en Firebase:", error);
+    });
+
+    return () => unsub();
+  }, [user]);
+
+  useEffect(() => {
+    localStorage.setItem('finanzas_tags', JSON.stringify(tags));
+  }, [tags]);
+
+  const registrar = async (tipo) => {
+    if (!nombre || !monto || !user) return;
     const ahora = new Date();
-    const nuevo = { 
-      id: Date.now().toString(), 
-      nombre, 
-      monto: parseFloat(monto), 
-      tipo, 
-      fecha: ahora.toLocaleDateString('en-CA'), 
-      hora: ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    setMovimientos(prev => [nuevo, ...prev]);
-    setNombre(''); setMonto('');
+    try {
+      await addDoc(collection(db, "movimientos"), {
+        uid: user.uid,
+        nombre,
+        monto: parseFloat(monto),
+        tipo,
+        fecha: ahora.toLocaleDateString('en-CA'),
+        hora: ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        createdAt: Date.now()
+      });
+      setNombre(''); setMonto('');
+    } catch (e) { alert("Error al guardar"); }
   };
 
-  const editarTag = (index) => {
-    const nuevoNombre = prompt("Nuevo nombre para tu botón favorito:", tags[index]);
-    if (nuevoNombre) {
-      const nuevosTags = [...tags];
-      nuevosTags[index] = nuevoNombre;
-      setTags(nuevosTags);
+  const eliminar = async (id) => {
+    if (window.confirm("¿Borrar?")) await deleteDoc(doc(db, "movimientos", id));
+  };
+
+  const editarTag = (i) => {
+    const n = prompt("Nuevo nombre:", tags[i]);
+    if (n) {
+      const nt = [...tags]; nt[i] = n; setTags(nt);
     }
   };
 
+  const login = () => signInWithPopup(auth, googleProvider);
+  const logout = () => signOut(auth);
+
   const exportarExcel = () => {
-    if (movimientos.length === 0) return alert("No hay datos");
     const ws = XLSX.utils.json_to_sheet(movimientos);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Finanzas");
-    XLSX.writeFile(wb, `Finanzas_${fechaFiltro}.xlsx`);
+    XLSX.writeFile(wb, "Reporte.xlsx");
   };
 
-  const datosFiltrados = movimientos
-    .filter(m => {
-      if (vistaMensual) {
-        const mesActual = fechaFiltro.substring(0, 7);
-        return m.fecha.startsWith(mesActual);
-      }
-      return m.fecha === fechaFiltro;
-    })
-    .filter(m => m.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+  // Cálculos
+  const filtrados = movimientos.filter(m => {
+    const matchFecha = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
+    return matchFecha && m.nombre.toLowerCase().includes(busqueda.toLowerCase());
+  });
 
-  const totalIn = datosFiltrados.filter(m => m.tipo === 'ingreso').reduce((acc, m) => acc + m.monto, 0);
-  const totalOut = datosFiltrados.filter(m => m.tipo === 'gasto').reduce((acc, m) => acc + m.monto, 0);
-  const ahorro = totalIn - totalOut;
+  const tIn = filtrados.filter(m => m.tipo === 'ingreso').reduce((a, b) => a + b.monto, 0);
+  const tOut = filtrados.filter(m => m.tipo === 'gasto').reduce((a, b) => a + b.monto, 0);
+  const bal = tIn - tOut;
 
-  const totalG = totalIn + totalOut + (ahorro > 0 ? ahorro : 0);
-  const pOut = totalG > 0 ? (totalOut / totalG) * 360 : 0;
-  const pIn = totalG > 0 ? (totalIn / totalG) * 360 : 0;
-  
-  const graficoEstilo = {
-    background: totalG > 0 
-      ? `conic-gradient(#ff4757 0deg ${pOut}deg, #00d1b2 ${pOut}deg ${pOut + pIn}deg, #bb86fc ${pOut + pIn}deg 360deg)`
-      : `#222` 
-  };
+  const totalG = tIn + tOut + (bal > 0 ? bal : 0);
+  const pOut = totalG > 0 ? (tOut / totalG) * 360 : 0;
+  const pIn = totalG > 0 ? (tIn / totalG) * 360 : 0;
 
   return (
     <div className="main-container">
       <div className="phone-screen">
-        
         <header className="app-header">
-          <h2>{vistaMensual ? "Resumen Mensual" : "Detalle Día"}</h2>
+          <h2>{vistaMensual ? "Mensual" : "Día"}</h2>
           <div className="header-btns">
-            <button className="btn-excel" onClick={exportarExcel}>📊 Excel</button>
-            <button className="btn-switch" onClick={() => setVistaMensual(!vistaMensual)}>
-              {vistaMensual ? "📅 Ver Día" : "🗓️ Mensual"}
-            </button>
+            <button onClick={exportarExcel}>📊</button>
+            <button onClick={() => setVistaMensual(!vistaMensual)}>{vistaMensual ? "📅" : "🗓️"}</button>
           </div>
         </header>
 
-        <div className="date-selector">
-          <input 
-            type={vistaMensual ? "month" : "date"} 
-            value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro} 
-            onChange={(e) => setFechaFiltro(e.target.value)} 
-          />
+        <div className="auth-bar">
+          {user ? (
+            <div className="user-profile">
+              <img src={user.photoURL} alt="p" />
+              <span>{user.displayName.split(' ')[0]}</span>
+              <button onClick={logout} className="btn-logout">Salir</button>
+            </div>
+          ) : (
+            <button onClick={login} className="btn-login">🚀 Sincronizar con Google</button>
+          )}
         </div>
 
+        <input className="date-input" type={vistaMensual ? "month" : "date"} value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro} onChange={e => setFechaFiltro(e.target.value)} />
+
         <div className="main-card">
-          <div className="circle-chart-multi" style={graficoEstilo}>
-            <div className="inner-circle">
-              <div className="chart-info">
-                <p>S/ {ahorro.toFixed(2)}</p>
-                <span>{vistaMensual ? "Balance Mes" : "Balance Día"}</span>
-              </div>
-            </div>
+          <div className="circle-chart-multi" style={{background: totalG > 0 ? `conic-gradient(#ff4757 0deg ${pOut}deg, #00d1b2 ${pOut}deg ${pOut + pIn}deg, #bb86fc ${pOut + pIn}deg 360deg)` : '#222'}}>
+            <div className="inner-circle"><div className="chart-info"><p>S/ {bal.toFixed(2)}</p><span>Balance</span></div></div>
           </div>
           <div className="dashboard-stats">
-            <div className="stat"><span className="dot out"></span><span>Gastos</span><p>S/ {totalOut.toFixed(2)}</p></div>
-            <div className="stat"><span className="dot in"></span><span>Ingresos</span><p>S/ {totalIn.toFixed(2)}</p></div>
-            <div className="stat"><span className="dot save"></span><span>Ahorro</span><p>S/ {ahorro.toFixed(2)}</p></div>
+            <div className="stat"><span>Gastos</span><p>S/ {tOut.toFixed(2)}</p></div>
+            <div className="stat"><span>Ingresos</span><p>S/ {tIn.toFixed(2)}</p></div>
           </div>
         </div>
 
         <div className="input-section">
-          <p className="edit-hint">Presiona una etiqueta para cambiarle el nombre</p>
           <div className="quick-tags">
-            {tags.map((cat, index) => (
-              <button 
-                key={index} 
-                onClick={() => setNombre(cat)} 
-                onContextMenu={(e) => { e.preventDefault(); editarTag(index); }}
-                onTouchStart={(e) => {
-                    const timer = setTimeout(() => editarTag(index), 800);
-                    e.target.addEventListener('touchend', () => clearTimeout(timer), {once: true});
-                }}
-                className="tag-btn"
-              >
-                {cat}
-              </button>
-            ))}
+            {tags.map((t, i) => <button key={i} onClick={() => setNombre(t)} onContextMenu={(e) => {e.preventDefault(); editarTag(i)}} className="tag-btn">{t}</button>)}
           </div>
-          <input type="text" placeholder="¿Qué registramos?" value={nombre} onChange={e => setNombre(e.target.value)} />
-          <input type="number" placeholder="Monto S/" value={monto} onChange={e => setMonto(e.target.value)} />
+          <input type="text" placeholder="Detalle" value={nombre} onChange={e => setNombre(e.target.value)} />
+          <input type="number" placeholder="Monto" value={monto} onChange={e => setMonto(e.target.value)} />
           <div className="btn-group-direct">
-            <button onClick={() => registrar('ingreso')} className="btn-direct in">💰 Ingreso</button>
-            <button onClick={() => registrar('gasto')} className="btn-direct out">💸 Gasto</button>
+            <button onClick={() => registrar('ingreso')} className="btn-direct in">💰</button>
+            <button onClick={() => registrar('gasto')} className="btn-direct out">💸</button>
           </div>
-        </div>
-
-        <div className="search-box">
-          <input type="text" placeholder="🔍 Buscar movimiento..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
         </div>
 
         <div className="history-list">
-          {datosFiltrados.map(m => (
+          {filtrados.map(m => (
             <div key={m.id} className="history-item">
-              <div className={`icon-box ${m.tipo}`}>{m.tipo === 'ingreso' ? '💰' : '💸'}</div>
-              <div className="item-info">
-                <strong>{m.nombre}</strong>
-                <span>{m.fecha} · {m.hora}</span>
-              </div>
+              <div className="item-info"><strong>{m.nombre}</strong><span>{m.hora}</span></div>
               <div className="item-right">
-                <span className={`item-amount ${m.tipo}`}>S/ {m.monto.toFixed(2)}</span>
-                <button className="delete-btn" onClick={() => setMovimientos(prev => prev.filter(x => x.id !== m.id))}>&times;</button>
+                <span className={m.tipo}>S/ {m.monto.toFixed(2)}</span>
+                <button onClick={() => eliminar(m.id)}>&times;</button>
               </div>
             </div>
           ))}

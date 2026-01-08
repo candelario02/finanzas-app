@@ -295,3 +295,49 @@ input {
   text-transform: capitalize;
   cursor: pointer;
 }
+.auth-bar {
+  margin-bottom: 5px;
+}
+
+.btn-login {
+  width: 100%;
+  padding: 12px;
+  background: white;
+  color: #444;
+  border-radius: 12px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card-dark);
+  padding: 8px 15px;
+  border-radius: 50px;
+}
+
+.user-profile img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+}
+
+.user-profile span {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.btn-logout {
+  background: rgba(255, 71, 87, 0.2);
+  color: var(--error);
+  border: none;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
