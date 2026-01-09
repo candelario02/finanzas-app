@@ -21,28 +21,24 @@ function App() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
-        if (!user) alert("¡Iniciaste sesión exitosamente! 🚀");
         setUser(u);
-        
-        // CARGAR TAGS DEL USUARIO DESDE FIREBASE
         const docRef = doc(db, "config_usuario", u.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setTags(docSnap.data().tags);
         } else {
-          // Si es usuario nuevo, creamos sus tags iniciales en la nube
           await setDoc(docRef, { tags: ["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"] });
         }
       } else {
         setUser(null);
         setMovimientos([]);
-        setTags(["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"]); // Reset al cerrar sesión
+        setTags(["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"]);
       }
     });
     return () => unsub();
-  }, [user]);
+  }, []); // Quitamos 'user' de aquí para evitar bucles de alerta
 
-  // 2. Guardar Tags en Firebase cuando se editen
+  // 2. Guardar Tags en Firebase
   const guardarTagsEnNube = async (nuevosTags) => {
     if (user) {
       try {
@@ -57,11 +53,11 @@ function App() {
       const nt = [...tags];
       nt[i] = n;
       setTags(nt);
-      guardarTagsEnNube(nt); // Se guarda en Firebase inmediatamente
+      guardarTagsEnNube(nt);
     }
   };
 
-  // 3. Escucha de Movimientos (Firebase)
+  // 3. Escucha de Movimientos
   useEffect(() => {
     if (!user?.uid) return;
     const q = query(collection(db, "movimientos"), where("uid", "==", user.uid));
@@ -77,18 +73,19 @@ function App() {
     try {
       await addDoc(collection(db, "movimientos"), {
         uid: user.uid,
-        nombre,
+        nombre: nombre,
         monto: parseFloat(monto),
-        tipo,
+        tipo: tipo,
         fecha: new Date().toLocaleDateString('en-CA'),
         hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         createdAt: Date.now()
       });
-      setNombre(''); setMonto(''); // Limpia las cajas
+      // LIMPIEZA DE CAJAS
+      setNombre(''); 
+      setMonto('');
     } catch (e) { console.error(e); }
   };
 
-  // ... (stats y exportarPDF se mantienen igual que el código anterior)
   const stats = useMemo(() => {
     const filtrados = movimientos.filter(m => {
       const matchFecha = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
@@ -108,11 +105,11 @@ function App() {
 
   const exportarPDF = () => {
     if (window.confirm("¿Estás seguro de querer ver en PDF?")) {
-      const doc = new jsPDF();
-      doc.text("Reporte de Finanzas", 14, 20);
-      const data = stats.filtrados.map(m => [m.fecha, m.nombre, m.tipo, `S/ ${m.monto.toFixed(2)}`]);
-      doc.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: data, startY: 30 });
-      doc.save(`Reporte_Finanzas.pdf`);
+      const docGenerado = new jsPDF(); // Cambiado nombre para evitar error con 'doc' de Firebase
+      docGenerado.text("Reporte de Finanzas", 14, 20);
+      const data = stats.filtrados.map(m => [m.fecha, m.nombre, m.tipo.toUpperCase(), `S/ ${m.monto.toFixed(2)}`]);
+      docGenerado.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: data, startY: 30 });
+      docGenerado.save(`Reporte_Finanzas.pdf`);
     }
   };
 
@@ -127,7 +124,10 @@ function App() {
           <h2>Finanzas</h2>
           <div className="header-btns">
             {!user ? (
-              <button className="btn-google-mini" onClick={() => signInWithPopup(auth, googleProvider)}>G Login</button>
+              <button className="btn-google-login-oficial" onClick={() => signInWithPopup(auth, googleProvider)}>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="G" />
+                Login
+              </button>
             ) : (
               <img src={user.photoURL} alt="u" className="mini-avatar" onClick={logout} title="Cerrar sesión" />
             )}
@@ -162,7 +162,7 @@ function App() {
             </div>
           </div>
           <div className="dashboard-stats">
-            <div className="stat"><span>Gastos</span><p>S/ {stats.tOut.toFixed(2)}</p></div>
+            <div className="stat"><span className="gasto-label">Gastos</span><p className="gasto-monto">S/ {stats.tOut.toFixed(2)}</p></div>
             <div className="stat"><span>Ingresos</span><p>S/ {stats.tIn.toFixed(2)}</p></div>
             <div className="stat"><span>Ahorro</span><p style={{color: 'var(--accent)'}}>S/ {stats.ahorro.toFixed(2)}</p></div>
           </div>

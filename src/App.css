@@ -204,3 +204,95 @@ input {
   padding: 0;
   cursor: pointer;
 }
+/* BOTÓN GOOGLE ESTILO OFICIAL */
+.btn-google-login {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  color: #333;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.btn-google-login img { width: 18px; }
+
+/* NÚMEROS DE GASTO EN ROJO */
+.txt-gasto {
+  color: #ff4757 !important;
+  font-size: 1rem !important;
+}
+.lbl-gasto {
+  color: #ff4757;
+  font-weight: bold;
+}
+
+/* HISTORIAL: GASTOS EN ROJO */
+.item-amount.gasto {
+  color: #ff4757;
+  font-weight: bold;
+}
+.item-amount.ingreso {
+  color: #00d1b2;
+  font-weight: bold;
+}
+
+/* INPUTS MÁS LIMPIOS */
+input {
+  width: 100%;
+  box-sizing: border-box; /* Evita que se salgan de la pantalla */
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: white;
+}
+
+/* El resto de tu CSS anterior se mantiene igual... */
+/* BOTON GOOGLE OFICIAL */
+.btn-google-login-oficial {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.btn-google-login-oficial:hover {
+  box-shadow: 0 1px 3px rgba(60,64,67,0.3);
+}
+
+.btn-google-login-oficial img {
+  width: 16px;
+  height: 16px;
+}
+
+/* GASTOS EN ROJO EN EL DASHBOARD */
+.gasto-label {
+  color: #ff4757 !important;
+  font-weight: bold;
+}
+
+.gasto-monto {
+  color: #ff4757 !important;
+}
+
+/* HISTORIAL: GASTOS EN ROJO */
+.item-amount.gasto {
+  color: #ff4757 !important;
+}
+
+/* Asegurar que el contenedor principal no oculte el PDF */
+.main-container {
+  overflow-y: auto;
+}
