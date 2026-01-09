@@ -177,3 +177,67 @@ input {
 .btn-login { width: 100%; padding: 12px; background: white; border-radius: 12px; font-weight: bold; cursor: pointer; }
 .date-selector { text-align: center; margin-bottom: 10px; }
 .date-input { background: #1e1e1e; color: var(--accent); border: 1px solid #333; padding: 5px 15px; border-radius: 20px; font-weight: bold; }
+
+
+/* ... Tus variables se mantienen igual ... */
+
+.app-header h2 { font-size: 1.2rem; margin: 0; }
+
+.header-btns {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-google-mini {
+  background: white;
+  color: #444;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.mini-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 1px solid var(--accent);
+}
+
+.date-selector-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.date-selector-area label { font-size: 0.8rem; color: #aaa; }
+
+/* GRAFICO MAS GRANDE */
+.circle-chart-multi {
+  width: 210px; /* De 170px a 210px */
+  height: 210px;
+  border-radius: 50%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.5s ease;
+}
+
+.inner-circle {
+  width: 170px; /* Más espacio interno */
+  height: 170px;
+  background: var(--card-dark);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* El resto de tu CSS original se mantiene... */
