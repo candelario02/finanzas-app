@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { db, auth, googleProvider } from './firebase';
-import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc, setDoc, getDoc } from 'firebase/firestore';
-import jsPDF from 'jspdf';
+
 import 'jspdf-autotable';
 
 function App() {
@@ -18,32 +18,26 @@ function App() {
   const [vistaMensual, setVistaMensual] = useState(false);
   const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
 
-  // 1. PERSISTENCIA: Se ejecuta al cargar o refrescar
+  // 1. Persistencia Forzada y Recuperación de Datos
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (u) {
-        setUser(u);
-        try {
+    // Forzamos a Firebase a recordar la sesión en el navegador local
+    setPersistence(auth, browserLocalPersistence).then(() => {
+      return onAuthStateChanged(auth, async (u) => {
+        if (u) {
+          setUser(u);
           const docRef = doc(db, "config_usuario", u.uid);
           const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            setTags(docSnap.data().tags);
-          } else {
-            await setDoc(docRef, { tags: ["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"] });
-          }
-        } catch (err) {
-          console.error("Error al cargar config:", err);
+          if (docSnap.exists()) setTags(docSnap.data().tags);
+        } else {
+          setUser(null);
+          setMovimientos([]);
         }
-      } else {
-        setUser(null);
-        setMovimientos([]);
-      }
-      setLoading(false);
-    });
-    return () => unsub();
+        setLoading(false);
+      });
+    }).catch(err => console.error("Error persistencia:", err));
   }, []);
 
-  // 2. ESCUCHA DE DATOS: Solo si hay usuario
+  // 2. Escucha de Movimientos (Firestore)
   useEffect(() => {
     if (!user) return;
     const q = query(collection(db, "movimientos"), where("uid", "==", user.uid));
@@ -54,8 +48,10 @@ function App() {
     return () => unsub();
   }, [user]);
 
+  // 3. Registro con Limpieza Forzada de Cajas
   const registrar = async (tipo) => {
-    if (!nombre || !monto || !user) return alert("Inicia sesión y completa los datos");
+    if (!nombre || !monto || !user) return alert("Error: Inicia sesión y llena todos los campos.");
+    
     try {
       await addDoc(collection(db, "movimientos"), {
         uid: user.uid,
@@ -66,38 +62,32 @@ function App() {
         hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         createdAt: Date.now()
       });
+      
+      // LIMPIEZA ABSOLUTA DE LAS CAJAS
       setNombre('');
       setMonto('');
+      
+      // Aviso de éxito (Opcional, lo quitas si prefieres silencio)
+      console.log("Registrado con éxito");
     } catch (err) {
-      console.error("Error:", err);
+      alert("Error al guardar: " + err.message);
     }
   };
 
-  const manejarLogin = async () => {
+  const login = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      if (result.user) alert("✅ ¡Bienvenido, " + result.user.displayName + "!");
     } catch (err) {
-      console.error("Error login:", err);
-      alert("Error al conectar. Revisa que el dominio esté autorizado en Firebase.");
+      alert("Error en Login: " + err.message);
     }
   };
 
-  const manejarLogout = async () => {
-    if (window.confirm("¿Estás seguro que deseas cerrar sesión?")) {
-      try {
-        await signOut(auth);
-      } catch (err) {
-        console.error("Error logout:", err);
-      }
+  const logout = async () => {
+    if (window.confirm("¿Seguro que quieres cerrar sesión?")) {
+      await signOut(auth);
+      alert("Sesión cerrada correctamente.");
     }
-  };
-
-  const exportarPDF = () => {
-    const docPDF = new jsPDF();
-    docPDF.text("Reporte de Finanzas", 14, 20);
-    const data = filtrados.map(m => [m.fecha, m.nombre, m.tipo.toUpperCase(), `S/ ${m.monto.toFixed(2)}`]);
-    docPDF.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: data, startY: 30 });
-    docPDF.save("Reporte.pdf");
   };
 
   const editarTag = async (i) => {
@@ -110,7 +100,7 @@ function App() {
     }
   };
 
-  // Cálculos directos para evitar errores de compilación
+  // Lógica de filtrado
   const filtrados = movimientos.filter(m => {
     const matchFecha = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
     return matchFecha && m.nombre.toLowerCase().includes(busqueda.toLowerCase());
@@ -124,7 +114,7 @@ function App() {
   const pOut = totalG > 0 ? (tOut / totalG) * 360 : 0;
   const pIn = totalG > 0 ? (tIn / totalG) * 360 : 0;
 
-  if (loading) return <div className="loading-screen">Iniciando sistema...</div>;
+  if (loading) return <div style={{background:'#000', height:'100vh', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center'}}>Conectando con Firebase...</div>;
 
   return (
     <div className="main-container">
@@ -136,11 +126,10 @@ function App() {
           </div>
           <div className="header-btns">
             {!user ? (
-              <button className="btn-google-login-oficial" onClick={manejarLogin}>Login</button>
+              <button className="btn-google-login-oficial" onClick={login}>Login</button>
             ) : (
-              <img src={user.photoURL} alt="u" className="mini-avatar" onClick={manejarLogout} />
+              <img src={user.photoURL} alt="u" className="mini-avatar" onClick={logout} title="Click para salir" />
             )}
-            <button className="btn-icon" onClick={exportarPDF}>📄</button>
             <button className="btn-icon" onClick={() => setVistaMensual(!vistaMensual)}>{vistaMensual ? "📅" : "🗓️"}</button>
           </div>
         </header>
@@ -150,7 +139,7 @@ function App() {
             <div className="inner-circle">
               <div className="chart-info">
                 <p>S/ {bal.toFixed(2)}</p>
-                <span>{vistaMensual ? "Balance Mensual" : "Balance Diario"}</span>
+                <span>Balance {vistaMensual ? "Mensual" : "Diario"}</span>
               </div>
             </div>
           </div>
@@ -162,7 +151,7 @@ function App() {
         </div>
 
         <div className="input-section">
-          {!user && <p className="login-warning">⚠️ Inicia sesión para guardar datos</p>}
+          {!user && <p style={{color:'yellow', fontSize:'11px', textAlign:'center'}}>⚠️ Inicia sesión para guardar</p>}
           <div className="quick-tags">
             {tags.map((t, i) => (
               <button key={i} onClick={() => setNombre(t)} onContextMenu={(e)=>{e.preventDefault(); editarTag(i);}} className="tag-btn">{t}</button>
@@ -177,7 +166,7 @@ function App() {
         </div>
 
         <div className="history-list">
-          <input className="search-bar" type="text" placeholder="🔍 Buscar movimientos..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+          <input className="search-bar" type="text" placeholder="🔍 Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
           {filtrados.map(m => (
             <div key={m.id} className="history-item">
               <div className="item-info"><strong>{m.nombre}</strong><span>{m.hora}</span></div>
