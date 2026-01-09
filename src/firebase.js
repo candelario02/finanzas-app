@@ -3,13 +3,12 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyC3IiIKb77nAe6LEJ_yXPiXk_poUOmBfQo",
+  apiKey: "TU_API_KEY_AQUI",
   authDomain: "finanzas-personales-bfefc.firebaseapp.com",
   projectId: "finanzas-personales-bfefc",
-  storageBucket: "finanzas-personales-bfefc.firebasestorage.app",
-  messagingSenderId: "364064479158",
-  appId: "1:364064479158:web:e7aaed68777304be3a9317",
-  measurementId: "G-WFQQG87WMG"
+  storageBucket: "finanzas-personales-bfefc.appspot.com",
+  messagingSenderId: "TU_ID",
+  appId: "TU_APP_ID"
 };
 
 // Inicializar Firebase
