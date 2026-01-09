@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
+// Tu configuración única (sacada de tu última imagen)
 const firebaseConfig = {
   apiKey: "AIzaSyC3IiIKb77nAe6LEJ_yXPiXk_poUOmBFqo",
   authDomain: "finanzas-personales-bfefc.firebaseapp.com",
@@ -12,10 +13,13 @@ const firebaseConfig = {
   measurementId: "G-WFQQG87WMG"
 };
 
-// Inicializar Firebase
+// Inicializar una sola vez
 const app = initializeApp(firebaseConfig);
 
-// EXPORTAR HERRAMIENTAS (Esto es lo que faltaba)
+// Exportar las herramientas necesarias para App.jsx
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+
+// Configuración opcional para evitar el parpadeo de la ventana emergente
+googleProvider.setCustomParameters({ prompt: 'select_account' });
