@@ -4,27 +4,27 @@ import { db, auth, googleProvider } from './firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc, setDoc, getDoc } from 'firebase/firestore';
 
-import 'jspdf-autotable';
-
 function App() {
   const [user, setUser] = useState(null);
   const [movimientos, setMovimientos] = useState([]);
   const [tags, setTags] = useState(["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"]);
   const [loading, setLoading] = useState(true);
 
+  // Estados de las cajas de texto
   const [nombre, setNombre] = useState('');
   const [monto, setMonto] = useState('');
+  
   const [busqueda, setBusqueda] = useState('');
   const [vistaMensual, setVistaMensual] = useState(false);
   const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
 
-  // 1. Persistencia Forzada y Recuperación de Datos
+  // 1. Persistencia: Forzamos el guardado de sesión local para evitar el vacío al refrescar
   useEffect(() => {
-    // Forzamos a Firebase a recordar la sesión en el navegador local
     setPersistence(auth, browserLocalPersistence).then(() => {
-      return onAuthStateChanged(auth, async (u) => {
+      const unsubAuth = onAuthStateChanged(auth, async (u) => {
         if (u) {
           setUser(u);
+          // Cargar tags personalizados
           const docRef = doc(db, "config_usuario", u.uid);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) setTags(docSnap.data().tags);
@@ -34,73 +34,67 @@ function App() {
         }
         setLoading(false);
       });
-    }).catch(err => console.error("Error persistencia:", err));
+      return () => unsubAuth();
+    });
   }, []);
 
-  // 2. Escucha de Movimientos (Firestore)
+  // 2. Escucha en tiempo real (Sincronización total con la nube)
   useEffect(() => {
     if (!user) return;
     const q = query(collection(db, "movimientos"), where("uid", "==", user.uid));
-    const unsub = onSnapshot(q, (snapshot) => {
+    const unsubSnap = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
       setMovimientos(docs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
     });
-    return () => unsub();
+    return () => unsubSnap();
   }, [user]);
 
-  // 3. Registro con Limpieza Forzada de Cajas
+  // 3. Registro con LIMPIEZA INMEDIATA
   const registrar = async (tipo) => {
-    if (!nombre || !monto || !user) return alert("Error: Inicia sesión y llena todos los campos.");
+    if (!nombre || !monto || !user) return alert("Llena los datos e inicia sesión");
     
+    // Capturamos los datos actuales para enviarlos
+    const nuevoMovimiento = {
+      uid: user.uid,
+      nombre: nombre.trim(),
+      monto: parseFloat(monto),
+      tipo: tipo,
+      fecha: new Date().toLocaleDateString('en-CA'),
+      hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      createdAt: Date.now()
+    };
+
+    // LIMPIEZA INSTANTÁNEA (Antes de la llamada a red para que el usuario no espere)
+    setNombre('');
+    setMonto('');
+
     try {
-      await addDoc(collection(db, "movimientos"), {
-        uid: user.uid,
-        nombre: nombre.trim(),
-        monto: parseFloat(monto),
-        tipo: tipo,
-        fecha: new Date().toLocaleDateString('en-CA'),
-        hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        createdAt: Date.now()
-      });
-      
-      // LIMPIEZA ABSOLUTA DE LAS CAJAS
-      setNombre('');
-      setMonto('');
-      
-      // Aviso de éxito (Opcional, lo quitas si prefieres silencio)
-      console.log("Registrado con éxito");
+      await addDoc(collection(db, "movimientos"), nuevoMovimiento);
     } catch (err) {
       alert("Error al guardar: " + err.message);
+      // Si falla, devolvemos los valores para que el usuario no pierda lo que escribió
+      setNombre(nuevoMovimiento.nombre);
+      setMonto(nuevoMovimiento.monto.toString());
     }
   };
 
   const login = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      if (result.user) alert("✅ ¡Bienvenido, " + result.user.displayName + "!");
+      if (result.user) alert("✅ ¡Hola, " + result.user.displayName + "!");
     } catch (err) {
-      alert("Error en Login: " + err.message);
+      alert("Error login: " + err.message);
     }
   };
 
   const logout = async () => {
-    if (window.confirm("¿Seguro que quieres cerrar sesión?")) {
+    if (window.confirm("¿Deseas cerrar sesión?")) {
       await signOut(auth);
-      alert("Sesión cerrada correctamente.");
+      alert("Sesión cerrada.");
     }
   };
 
-  const editarTag = async (i) => {
-    const n = prompt("Edita tu favorito:", tags[i]);
-    if (n && user) {
-      const nt = [...tags];
-      nt[i] = n;
-      setTags(nt);
-      await setDoc(doc(db, "config_usuario", user.uid), { tags: nt });
-    }
-  };
-
-  // Lógica de filtrado
+  // Filtrado de datos para la vista actual
   const filtrados = movimientos.filter(m => {
     const matchFecha = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
     return matchFecha && m.nombre.toLowerCase().includes(busqueda.toLowerCase());
@@ -114,7 +108,7 @@ function App() {
   const pOut = totalG > 0 ? (tOut / totalG) * 360 : 0;
   const pIn = totalG > 0 ? (tIn / totalG) * 360 : 0;
 
-  if (loading) return <div style={{background:'#000', height:'100vh', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center'}}>Conectando con Firebase...</div>;
+  if (loading) return <div className="loading-screen">Sincronizando con la nube...</div>;
 
   return (
     <div className="main-container">
@@ -128,7 +122,7 @@ function App() {
             {!user ? (
               <button className="btn-google-login-oficial" onClick={login}>Login</button>
             ) : (
-              <img src={user.photoURL} alt="u" className="mini-avatar" onClick={logout} title="Click para salir" />
+              <img src={user.photoURL} alt="u" className="mini-avatar" onClick={logout} />
             )}
             <button className="btn-icon" onClick={() => setVistaMensual(!vistaMensual)}>{vistaMensual ? "📅" : "🗓️"}</button>
           </div>
@@ -139,7 +133,7 @@ function App() {
             <div className="inner-circle">
               <div className="chart-info">
                 <p>S/ {bal.toFixed(2)}</p>
-                <span>Balance {vistaMensual ? "Mensual" : "Diario"}</span>
+                <span>{vistaMensual ? "Balance Mensual" : "Balance Diario"}</span>
               </div>
             </div>
           </div>
@@ -151,10 +145,10 @@ function App() {
         </div>
 
         <div className="input-section">
-          {!user && <p style={{color:'yellow', fontSize:'11px', textAlign:'center'}}>⚠️ Inicia sesión para guardar</p>}
+          {!user && <p style={{color:'yellow', textAlign:'center', fontSize:'11px'}}>⚠️ Inicia sesión para registrar</p>}
           <div className="quick-tags">
             {tags.map((t, i) => (
-              <button key={i} onClick={() => setNombre(t)} onContextMenu={(e)=>{e.preventDefault(); editarTag(i);}} className="tag-btn">{t}</button>
+              <button key={i} onClick={() => setNombre(t)} className="tag-btn">{t}</button>
             ))}
           </div>
           <input type="text" placeholder="Detalle" value={nombre} onChange={e => setNombre(e.target.value)} />
@@ -167,6 +161,7 @@ function App() {
 
         <div className="history-list">
           <input className="search-bar" type="text" placeholder="🔍 Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+          {filtrados.length === 0 && user && <p style={{color:'#666', textAlign:'center', fontSize:'12px'}}>No hay datos para esta fecha</p>}
           {filtrados.map(m => (
             <div key={m.id} className="history-item">
               <div className="item-info"><strong>{m.nombre}</strong><span>{m.hora}</span></div>
