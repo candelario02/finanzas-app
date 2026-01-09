@@ -18,13 +18,8 @@ function App() {
   const [vistaMensual, setVistaMensual] = useState(false);
   const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
 
-  // 1. Persistencia y Desbloqueo de Pantalla Negra
+  // 1. PERSISTENCIA: Se ejecuta al cargar o refrescar
   useEffect(() => {
-    // Temporizador de seguridad: Si en 5 segundos no carga, forzar la entrada
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 5000);
-
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
@@ -37,36 +32,30 @@ function App() {
             await setDoc(docRef, { tags: ["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"] });
           }
         } catch (err) {
-          console.error("Error preferencias:", err);
+          console.error("Error al cargar config:", err);
         }
       } else {
         setUser(null);
         setMovimientos([]);
       }
       setLoading(false);
-      clearTimeout(timer);
     });
-    return () => {
-      unsub();
-      clearTimeout(timer);
-    };
+    return () => unsub();
   }, []);
 
-  // 2. Escucha en Tiempo Real
+  // 2. ESCUCHA DE DATOS: Solo si hay usuario
   useEffect(() => {
     if (!user) return;
     const q = query(collection(db, "movimientos"), where("uid", "==", user.uid));
     const unsub = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
       setMovimientos(docs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
-    }, (error) => {
-      console.error("Error en snapshot:", error);
     });
     return () => unsub();
   }, [user]);
 
   const registrar = async (tipo) => {
-    if (!nombre || !monto || !user) return alert("Completa los datos e inicia sesión");
+    if (!nombre || !monto || !user) return alert("Inicia sesión y completa los datos");
     try {
       await addDoc(collection(db, "movimientos"), {
         uid: user.uid,
@@ -80,16 +69,26 @@ function App() {
       setNombre('');
       setMonto('');
     } catch (err) {
-      console.error("Error registro:", err);
+      console.error("Error:", err);
     }
   };
 
-  const login = async () => {
+  const manejarLogin = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (err) {
       console.error("Error login:", err);
-      alert("Error al iniciar sesión. Revisa los dominios autorizados en Firebase.");
+      alert("Error al conectar. Revisa que el dominio esté autorizado en Firebase.");
+    }
+  };
+
+  const manejarLogout = async () => {
+    if (window.confirm("¿Estás seguro que deseas cerrar sesión?")) {
+      try {
+        await signOut(auth);
+      } catch (err) {
+        console.error("Error logout:", err);
+      }
     }
   };
 
@@ -98,11 +97,11 @@ function App() {
     docPDF.text("Reporte de Finanzas", 14, 20);
     const data = filtrados.map(m => [m.fecha, m.nombre, m.tipo.toUpperCase(), `S/ ${m.monto.toFixed(2)}`]);
     docPDF.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: data, startY: 30 });
-    docPDF.save("Reporte_Finanzas.pdf");
+    docPDF.save("Reporte.pdf");
   };
 
   const editarTag = async (i) => {
-    const n = prompt("Edita tu botón:", tags[i]);
+    const n = prompt("Edita tu favorito:", tags[i]);
     if (n && user) {
       const nt = [...tags];
       nt[i] = n;
@@ -111,6 +110,7 @@ function App() {
     }
   };
 
+  // Cálculos directos para evitar errores de compilación
   const filtrados = movimientos.filter(m => {
     const matchFecha = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
     return matchFecha && m.nombre.toLowerCase().includes(busqueda.toLowerCase());
@@ -124,7 +124,7 @@ function App() {
   const pOut = totalG > 0 ? (tOut / totalG) * 360 : 0;
   const pIn = totalG > 0 ? (tIn / totalG) * 360 : 0;
 
-  if (loading) return <div style={{color:'white', textAlign:'center', marginTop:'20%'}}>Iniciando sistema...</div>;
+  if (loading) return <div className="loading-screen">Iniciando sistema...</div>;
 
   return (
     <div className="main-container">
@@ -136,9 +136,9 @@ function App() {
           </div>
           <div className="header-btns">
             {!user ? (
-              <button className="btn-google-login-oficial" onClick={login}>Login</button>
+              <button className="btn-google-login-oficial" onClick={manejarLogin}>Login</button>
             ) : (
-              <img src={user.photoURL} alt="u" className="mini-avatar" onClick={() => signOut(auth)} />
+              <img src={user.photoURL} alt="u" className="mini-avatar" onClick={manejarLogout} />
             )}
             <button className="btn-icon" onClick={exportarPDF}>📄</button>
             <button className="btn-icon" onClick={() => setVistaMensual(!vistaMensual)}>{vistaMensual ? "📅" : "🗓️"}</button>
@@ -150,7 +150,7 @@ function App() {
             <div className="inner-circle">
               <div className="chart-info">
                 <p>S/ {bal.toFixed(2)}</p>
-                <span>Balance {vistaMensual ? "Mensual" : "Diario"}</span>
+                <span>{vistaMensual ? "Balance Mensual" : "Balance Diario"}</span>
               </div>
             </div>
           </div>
@@ -162,7 +162,7 @@ function App() {
         </div>
 
         <div className="input-section">
-          {!user && <p style={{color:'yellow', fontSize:'12px', textAlign:'center'}}>Inicia sesión para registrar datos</p>}
+          {!user && <p className="login-warning">⚠️ Inicia sesión para guardar datos</p>}
           <div className="quick-tags">
             {tags.map((t, i) => (
               <button key={i} onClick={() => setNombre(t)} onContextMenu={(e)=>{e.preventDefault(); editarTag(i);}} className="tag-btn">{t}</button>
@@ -177,7 +177,7 @@ function App() {
         </div>
 
         <div className="history-list">
-          <input className="search-bar" type="text" placeholder="🔍 Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+          <input className="search-bar" type="text" placeholder="🔍 Buscar movimientos..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
           {filtrados.map(m => (
             <div key={m.id} className="history-item">
               <div className="item-info"><strong>{m.nombre}</strong><span>{m.hora}</span></div>
