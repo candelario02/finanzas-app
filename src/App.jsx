@@ -20,44 +20,45 @@ function App() {
   const [vistaMensual, setVistaMensual] = useState(false);
   const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
 
-  // 1. MANEJO DE USUARIO (CORREGIDO)
+  // 1. Manejo de Usuario con Avisos
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
-      if (!u) {
-        // Limpiamos los datos AQUÍ, en lugar de en otro useEffect
-        setMovimientos([]);
+      if (u && !user) {
+        alert("¡Iniciaste sesión exitosamente! 🚀");
       }
       setUser(u);
+      if (!u) setMovimientos([]);
     });
     return () => unsub();
-  }, []);
+  }, [user]);
 
-  // 2. ESCUCHA DE DATOS (CORREGIDO PARA EVITAR RENDERS CASCADA)
+  const login = () => signInWithPopup(auth, googleProvider);
+  
+  const logout = () => {
+    if (window.confirm("¿Estás seguro que quieres salir?")) {
+      signOut(auth);
+    }
+  };
+
+  // 2. Escucha de Datos
   useEffect(() => {
-    // Si no hay usuario o ID de usuario, no hacemos nada
     if (!user?.uid) return;
-
     const q = query(collection(db, "movimientos"), where("uid", "==", user.uid));
-    
-    // El onSnapshot es una escucha asíncrona, no bloquea el render
     const unsub = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
-      // Solo actualizamos si realmente hay cambios
       setMovimientos(docs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
-    }, (error) => {
-      console.error("Error en Firebase:", error);
     });
-
     return () => unsub();
-  }, [user?.uid]); // Solo se dispara cuando el ID de usuario cambia realmente
+  }, [user?.uid]);
 
+  // 3. Guardar Tags Permanentemente
   useEffect(() => {
     localStorage.setItem('finanzas_tags', JSON.stringify(tags));
   }, [tags]);
 
   const editarTag = (i) => {
     const n = prompt("Edita tu botón:", tags[i]);
-    if (n) {
+    if (n !== null && n.trim() !== "") {
       const nt = [...tags];
       nt[i] = n;
       setTags(nt);
@@ -76,8 +77,10 @@ function App() {
         hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         createdAt: Date.now()
       });
-      setNombre(''); setMonto('');
-    } catch (e) { console.error("Error al registrar:", e); }
+      // LIMPIAR CAJAS DE TEXTO
+      setNombre(''); 
+      setMonto('');
+    } catch (e) { console.error(e); }
   };
 
   const stats = useMemo(() => {
@@ -98,11 +101,13 @@ function App() {
   }, [movimientos, vistaMensual, fechaFiltro, busqueda]);
 
   const exportarPDF = () => {
-    const doc = new jsPDF();
-    doc.text("Reporte de Finanzas", 14, 20);
-    const data = stats.filtrados.map(m => [m.fecha, m.nombre, m.tipo, `S/ ${m.monto.toFixed(2)}`]);
-    doc.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: data, startY: 30 });
-    doc.save(`Reporte.pdf`);
+    if (window.confirm("¿Estás seguro de querer ver en PDF?")) {
+      const doc = new jsPDF();
+      doc.text("Reporte de Finanzas", 14, 20);
+      const data = stats.filtrados.map(m => [m.fecha, m.nombre, m.tipo, `S/ ${m.monto.toFixed(2)}`]);
+      doc.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: data, startY: 30 });
+      doc.save(`Reporte_Finanzas.pdf`);
+    }
   };
 
   return (
@@ -112,18 +117,25 @@ function App() {
           <h2>Finanzas</h2>
           <div className="header-btns">
             {!user ? (
-              <button className="btn-google-mini" onClick={() => signInWithPopup(auth, googleProvider)}>G Login</button>
+              <button className="btn-google-mini" onClick={login}>G Login</button>
             ) : (
-              <img src={user.photoURL} alt="u" className="mini-avatar" onClick={() => signOut(auth)} />
+              <img src={user.photoURL} alt="u" className="mini-avatar" onClick={logout} />
             )}
             <button className="btn-icon" onClick={exportarPDF}>📄</button>
-            <button className="btn-icon" onClick={() => setVistaMensual(!vistaMensual)}>{vistaMensual ? "📅" : "🗓️"}</button>
+            <button className="btn-icon" onClick={() => setVistaMensual(!vistaMensual)}>
+              {vistaMensual ? "📅" : "🗓️"}
+            </button>
           </div>
         </header>
 
         <div className="date-selector-area">
-          <label>Ver por días:</label>
-          <input className="date-input" type={vistaMensual ? "month" : "date"} value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro} onChange={e => setFechaFiltro(e.target.value)} />
+          <label>{vistaMensual ? "Mes seleccionado:" : "Día seleccionado:"}</label>
+          <input 
+            className="date-input" 
+            type={vistaMensual ? "month" : "date"} 
+            value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro} 
+            onChange={e => setFechaFiltro(e.target.value)} 
+          />
         </div>
 
         <div className="main-card">
@@ -132,7 +144,13 @@ function App() {
               ? `conic-gradient(#ff4757 0deg ${stats.pOut}deg, #00d1b2 ${stats.pOut}deg ${stats.pOut + stats.pIn}deg, #bb86fc ${stats.pOut + stats.pIn}deg 360deg)` 
               : '#222'
           }}>
-            <div className="inner-circle"><div className="chart-info"><p>S/ {stats.bal.toFixed(2)}</p><span>Balance</span></div></div>
+            <div className="inner-circle">
+              <div className="chart-info">
+                <p>S/ {stats.bal.toFixed(2)}</p>
+                {/* TEXTO DINAMICO BALANCE */}
+                <span>Balance del {vistaMensual ? "Mes" : "Día"}</span>
+              </div>
+            </div>
           </div>
           <div className="dashboard-stats">
             <div className="stat"><span>Gastos</span><p>S/ {stats.tOut.toFixed(2)}</p></div>
@@ -142,10 +160,17 @@ function App() {
         </div>
 
         <div className="input-section">
-          <p className="edit-hint">✨ Pulsa para editar tus palabras favoritas</p>
+          <p className="edit-hint">✨ Mantén pulsado para editar tus favoritos</p>
           <div className="quick-tags">
             {tags.map((t, i) => (
-              <button key={i} onClick={() => setNombre(t)} onContextMenu={(e) => { e.preventDefault(); editarTag(i); }} className="tag-btn">{t}</button>
+              <button 
+                key={i} 
+                onClick={() => setNombre(t)} 
+                onContextMenu={(e) => { e.preventDefault(); editarTag(i); }} 
+                className="tag-btn"
+              >
+                {t}
+              </button>
             ))}
           </div>
           <input type="text" placeholder="Detalle" value={nombre} onChange={e => setNombre(e.target.value)} />
