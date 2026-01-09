@@ -2,17 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import './App.css';
 import { db, auth, googleProvider } from './firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
-import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc, setDoc, getDoc } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
 function App() {
   const [user, setUser] = useState(null);
   const [movimientos, setMovimientos] = useState([]);
-  const [tags, setTags] = useState(() => {
-    const savedTags = localStorage.getItem('finanzas_tags');
-    return savedTags ? JSON.parse(savedTags) : ["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"];
-  });
+  const [tags, setTags] = useState(["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"]);
 
   const [nombre, setNombre] = useState('');
   const [monto, setMonto] = useState('');
@@ -20,27 +17,51 @@ function App() {
   const [vistaMensual, setVistaMensual] = useState(false);
   const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
 
-  // 1. Manejo de Usuario con Avisos
+  // 1. Manejo de Usuario y Carga de Tags desde Firebase
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      if (u && !user) {
-        alert("¡Iniciaste sesión exitosamente! 🚀");
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (u) {
+        if (!user) alert("¡Iniciaste sesión exitosamente! 🚀");
+        setUser(u);
+        
+        // CARGAR TAGS DEL USUARIO DESDE FIREBASE
+        const docRef = doc(db, "config_usuario", u.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setTags(docSnap.data().tags);
+        } else {
+          // Si es usuario nuevo, creamos sus tags iniciales en la nube
+          await setDoc(docRef, { tags: ["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"] });
+        }
+      } else {
+        setUser(null);
+        setMovimientos([]);
+        setTags(["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"]); // Reset al cerrar sesión
       }
-      setUser(u);
-      if (!u) setMovimientos([]);
     });
     return () => unsub();
   }, [user]);
 
-  const login = () => signInWithPopup(auth, googleProvider);
-  
-  const logout = () => {
-    if (window.confirm("¿Estás seguro que quieres salir?")) {
-      signOut(auth);
+  // 2. Guardar Tags en Firebase cuando se editen
+  const guardarTagsEnNube = async (nuevosTags) => {
+    if (user) {
+      try {
+        await setDoc(doc(db, "config_usuario", user.uid), { tags: nuevosTags });
+      } catch (e) { console.error("Error al guardar tags:", e); }
     }
   };
 
-  // 2. Escucha de Datos
+  const editarTag = (i) => {
+    const n = prompt("Edita tu botón:", tags[i]);
+    if (n !== null && n.trim() !== "") {
+      const nt = [...tags];
+      nt[i] = n;
+      setTags(nt);
+      guardarTagsEnNube(nt); // Se guarda en Firebase inmediatamente
+    }
+  };
+
+  // 3. Escucha de Movimientos (Firebase)
   useEffect(() => {
     if (!user?.uid) return;
     const q = query(collection(db, "movimientos"), where("uid", "==", user.uid));
@@ -50,20 +71,6 @@ function App() {
     });
     return () => unsub();
   }, [user?.uid]);
-
-  // 3. Guardar Tags Permanentemente
-  useEffect(() => {
-    localStorage.setItem('finanzas_tags', JSON.stringify(tags));
-  }, [tags]);
-
-  const editarTag = (i) => {
-    const n = prompt("Edita tu botón:", tags[i]);
-    if (n !== null && n.trim() !== "") {
-      const nt = [...tags];
-      nt[i] = n;
-      setTags(nt);
-    }
-  };
 
   const registrar = async (tipo) => {
     if (!nombre || !monto || !user) return alert("Falta detalle, monto o sesión");
@@ -77,12 +84,11 @@ function App() {
         hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         createdAt: Date.now()
       });
-      // LIMPIAR CAJAS DE TEXTO
-      setNombre(''); 
-      setMonto('');
+      setNombre(''); setMonto(''); // Limpia las cajas
     } catch (e) { console.error(e); }
   };
 
+  // ... (stats y exportarPDF se mantienen igual que el código anterior)
   const stats = useMemo(() => {
     const filtrados = movimientos.filter(m => {
       const matchFecha = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
@@ -110,6 +116,10 @@ function App() {
     }
   };
 
+  const logout = () => {
+    if (window.confirm("¿Estás seguro que quieres salir?")) signOut(auth);
+  };
+
   return (
     <div className="main-container">
       <div className="phone-screen">
@@ -117,9 +127,9 @@ function App() {
           <h2>Finanzas</h2>
           <div className="header-btns">
             {!user ? (
-              <button className="btn-google-mini" onClick={login}>G Login</button>
+              <button className="btn-google-mini" onClick={() => signInWithPopup(auth, googleProvider)}>G Login</button>
             ) : (
-              <img src={user.photoURL} alt="u" className="mini-avatar" onClick={logout} />
+              <img src={user.photoURL} alt="u" className="mini-avatar" onClick={logout} title="Cerrar sesión" />
             )}
             <button className="btn-icon" onClick={exportarPDF}>📄</button>
             <button className="btn-icon" onClick={() => setVistaMensual(!vistaMensual)}>
@@ -129,7 +139,7 @@ function App() {
         </header>
 
         <div className="date-selector-area">
-          <label>{vistaMensual ? "Mes seleccionado:" : "Día seleccionado:"}</label>
+          <label>{vistaMensual ? "Mes:" : "Día:"}</label>
           <input 
             className="date-input" 
             type={vistaMensual ? "month" : "date"} 
@@ -147,7 +157,6 @@ function App() {
             <div className="inner-circle">
               <div className="chart-info">
                 <p>S/ {stats.bal.toFixed(2)}</p>
-                {/* TEXTO DINAMICO BALANCE */}
                 <span>Balance del {vistaMensual ? "Mes" : "Día"}</span>
               </div>
             </div>
@@ -160,7 +169,7 @@ function App() {
         </div>
 
         <div className="input-section">
-          <p className="edit-hint">✨ Mantén pulsado para editar tus favoritos</p>
+          <p className="edit-hint">✨ Mantén pulsado para editar favoritos</p>
           <div className="quick-tags">
             {tags.map((t, i) => (
               <button 
@@ -181,7 +190,9 @@ function App() {
           </div>
         </div>
 
-        <div className="search-box"><input type="text" placeholder="🔍 Buscar..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} /></div>
+        <div className="search-box">
+          <input type="text" placeholder="🔍 Buscar..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+        </div>
 
         <div className="history-list">
           {stats.filtrados.map(m => (
