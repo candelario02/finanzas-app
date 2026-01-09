@@ -18,7 +18,13 @@ function App() {
   const [vistaMensual, setVistaMensual] = useState(false);
   const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
 
+  // 1. Persistencia y Desbloqueo de Pantalla Negra
   useEffect(() => {
+    // Temporizador de seguridad: Si en 5 segundos no carga, forzar la entrada
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
@@ -38,22 +44,29 @@ function App() {
         setMovimientos([]);
       }
       setLoading(false);
+      clearTimeout(timer);
     });
-    return () => unsub();
+    return () => {
+      unsub();
+      clearTimeout(timer);
+    };
   }, []);
 
+  // 2. Escucha en Tiempo Real
   useEffect(() => {
     if (!user) return;
     const q = query(collection(db, "movimientos"), where("uid", "==", user.uid));
     const unsub = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
       setMovimientos(docs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
+    }, (error) => {
+      console.error("Error en snapshot:", error);
     });
     return () => unsub();
   }, [user]);
 
   const registrar = async (tipo) => {
-    if (!nombre || !monto || !user) return alert("Completa los datos");
+    if (!nombre || !monto || !user) return alert("Completa los datos e inicia sesión");
     try {
       await addDoc(collection(db, "movimientos"), {
         uid: user.uid,
@@ -74,10 +87,9 @@ function App() {
   const login = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-      alert("¡Sesión iniciada!");
     } catch (err) {
-      console.error("Error login:", err); // <-- Aquí usamos 'err' para que no salga error
-      alert("Error en login. Verifique consola.");
+      console.error("Error login:", err);
+      alert("Error al iniciar sesión. Revisa los dominios autorizados en Firebase.");
     }
   };
 
@@ -112,7 +124,7 @@ function App() {
   const pOut = totalG > 0 ? (tOut / totalG) * 360 : 0;
   const pIn = totalG > 0 ? (tIn / totalG) * 360 : 0;
 
-  if (loading) return <div style={{color:'white', textAlign:'center', marginTop:'20%'}}>Cargando datos...</div>;
+  if (loading) return <div style={{color:'white', textAlign:'center', marginTop:'20%'}}>Iniciando sistema...</div>;
 
   return (
     <div className="main-container">
@@ -150,6 +162,7 @@ function App() {
         </div>
 
         <div className="input-section">
+          {!user && <p style={{color:'yellow', fontSize:'12px', textAlign:'center'}}>Inicia sesión para registrar datos</p>}
           <div className="quick-tags">
             {tags.map((t, i) => (
               <button key={i} onClick={() => setNombre(t)} onContextMenu={(e)=>{e.preventDefault(); editarTag(i);}} className="tag-btn">{t}</button>
