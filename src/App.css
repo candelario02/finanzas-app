@@ -355,3 +355,13 @@ input {
   border: 1px solid #333;
   color: white;
 }
+.loading-screen {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+  color: #bb86fc;
+  font-size: 1.5rem;
+  font-weight: bold;
+}

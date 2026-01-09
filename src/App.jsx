@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import { db, auth, googleProvider } from './firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -10,6 +10,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [movimientos, setMovimientos] = useState([]);
   const [tags, setTags] = useState(["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"]);
+  const [loading, setLoading] = useState(true);
 
   const [nombre, setNombre] = useState('');
   const [monto, setMonto] = useState('');
@@ -17,7 +18,7 @@ function App() {
   const [vistaMensual, setVistaMensual] = useState(false);
   const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
 
-  // 1. Manejo de Usuario y Carga de Tags
+  // 1. Manejo de Usuario y Persistencia de Sesión
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
@@ -27,20 +28,21 @@ function App() {
         if (docSnap.exists()) {
           setTags(docSnap.data().tags);
         } else {
+          // Usa setDoc para inicializar tags si no existen
           await setDoc(docRef, { tags: ["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"] });
         }
       } else {
         setUser(null);
         setMovimientos([]);
-        setTags(["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"]);
       }
+      setLoading(false);
     });
     return () => unsub();
   }, []);
 
-  // 2. Escucha de Movimientos
+  // 2. Escucha de Movimientos en Tiempo Real
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user) return;
     const q = query(collection(db, "movimientos"), where("uid", "==", user.uid));
     const unsub = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
@@ -50,7 +52,7 @@ function App() {
   }, [user]);
 
   const registrar = async (tipo) => {
-    if (!nombre || !monto || !user) return alert("Falta detalle, monto o sesión");
+    if (!nombre || !monto || !user) return alert("Faltan datos");
     try {
       await addDoc(collection(db, "movimientos"), {
         uid: user.uid,
@@ -61,50 +63,58 @@ function App() {
         hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         createdAt: Date.now()
       });
-      // LIMPIEZA AUTOMÁTICA DE CAJAS
-      setNombre(''); 
+      // LIMPIEZA DE CAJAS
+      setNombre('');
       setMonto('');
-    } catch (err) { 
-      console.error("Error al registrar:", err); 
+    } catch (error) {
+      console.error("Error al registrar:", error);
     }
   };
 
-  const stats = useMemo(() => {
-    const filtrados = movimientos.filter(m => {
-      const matchFecha = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
-      return matchFecha && m.nombre.toLowerCase().includes(busqueda.toLowerCase());
-    });
-    const tIn = filtrados.filter(m => m.tipo === 'ingreso').reduce((a, b) => a + b.monto, 0);
-    const tOut = filtrados.filter(m => m.tipo === 'gasto').reduce((a, b) => a + b.monto, 0);
-    const bal = tIn - tOut;
-    const ahorro = bal > 0 ? bal : 0;
-    const totalG = tIn + tOut + ahorro;
-    return { 
-      filtrados, tIn, tOut, bal, ahorro,
-      pOut: totalG > 0 ? (tOut / totalG) * 360 : 0,
-      pIn: totalG > 0 ? (tIn / totalG) * 360 : 0
-    };
-  }, [movimientos, vistaMensual, fechaFiltro, busqueda]);
+  const manejarLogin = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+      alert("Sesión iniciada");
+    } catch (error) {
+      console.error("Error Login:", error);
+    }
+  };
 
   const exportarPDF = () => {
-    if (window.confirm("¿Deseas descargar el reporte PDF?")) {
-      const docPDF = new jsPDF();
-      docPDF.text("Reporte de Finanzas", 14, 20);
-      const data = stats.filtrados.map(m => [m.fecha, m.nombre, m.tipo.toUpperCase(), `S/ ${m.monto.toFixed(2)}`]);
-      docPDF.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: data, startY: 30 });
-      docPDF.save(`Reporte_Finanzas.pdf`);
+    // Aquí usamos jsPDF para que no marque error en el import
+    const docPDF = new jsPDF();
+    docPDF.text("Reporte de Finanzas", 14, 20);
+    const tablaData = filtrados.map(m => [m.fecha, m.nombre, m.tipo.toUpperCase(), `S/ ${m.monto.toFixed(2)}`]);
+    docPDF.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: tablaData, startY: 30 });
+    docPDF.save("Reporte.pdf");
+  };
+
+  const editarTag = async (i) => {
+    const n = prompt("Edita tu botón:", tags[i]);
+    if (n && user) {
+      const nuevosTags = [...tags];
+      nuevosTags[i] = n;
+      setTags(nuevosTags);
+      await setDoc(doc(db, "config_usuario", user.uid), { tags: nuevosTags });
     }
   };
 
-  const editarTag = (i) => {
-    const n = prompt("Edita tu botón:", tags[i]);
-    if (n !== null && n.trim() !== "") {
-      const nt = [...tags];
-      nt[i] = n;
-      setTags(nt);
-      if (user) setDoc(doc(db, "config_usuario", user.uid), { tags: nt });
-    }
-  };
+  // Cálculos sin useMemo para evitar errores del compilador
+  const filtrados = movimientos.filter(m => {
+    const matchFecha = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
+    return matchFecha && m.nombre.toLowerCase().includes(busqueda.toLowerCase());
+  });
+
+  const tIn = filtrados.filter(m => m.tipo === 'ingreso').reduce((a, b) => a + b.monto, 0);
+  const tOut = filtrados.filter(m => m.tipo === 'gasto').reduce((a, b) => a + b.monto, 0);
+  const bal = tIn - tOut;
+  const ahorro = bal > 0 ? bal : 0;
+  const totalG = tIn + tOut + ahorro;
+
+  const pOut = totalG > 0 ? (tOut / totalG) * 360 : 0;
+  const pIn = totalG > 0 ? (tIn / totalG) * 360 : 0;
+
+  if (loading) return <div className="loading">Cargando...</div>;
 
   return (
     <div className="main-container">
@@ -121,10 +131,7 @@ function App() {
           </div>
           <div className="header-btns">
             {!user ? (
-              <button className="btn-google-login-oficial" onClick={() => signInWithPopup(auth, googleProvider)}>
-                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="G" />
-                Login
-              </button>
+              <button onClick={manejarLogin} className="btn-google-login-oficial">Login</button>
             ) : (
               <img src={user.photoURL} alt="u" className="mini-avatar" onClick={() => signOut(auth)} />
             )}
@@ -135,35 +142,28 @@ function App() {
 
         <div className="main-card donut-area">
           <div className="circle-chart-multi" style={{
-            background: (stats.tIn + stats.tOut + stats.ahorro) > 0 
-              ? `conic-gradient(#ff4757 0deg ${stats.pOut}deg, #00d1b2 ${stats.pOut}deg ${stats.pOut + stats.pIn}deg, #bb86fc ${stats.pOut + stats.pIn}deg 360deg)` 
+            background: totalG > 0 
+              ? `conic-gradient(#ff4757 0deg ${pOut}deg, #00d1b2 ${pOut}deg ${pOut + pIn}deg, #bb86fc ${pOut + pIn}deg 360deg)` 
               : '#222'
           }}>
             <div className="inner-circle">
               <div className="chart-info">
-                <p>S/ {stats.bal.toFixed(2)}</p>
+                <p>S/ {bal.toFixed(2)}</p>
                 <span>Balance {vistaMensual ? "Mensual" : "Diario"}</span>
               </div>
             </div>
           </div>
           <div className="dashboard-stats">
-            <div className="stat"><span className="gasto-label">Gastos</span><p className="gasto-monto">S/ {stats.tOut.toFixed(2)}</p></div>
-            <div className="stat"><span>Ingresos</span><p>S/ {stats.tIn.toFixed(2)}</p></div>
-            <div className="stat"><span>Ahorro</span><p style={{color: '#bb86fc'}}>S/ {stats.ahorro.toFixed(2)}</p></div>
+            <div className="stat"><span>Gastos</span><p className="gasto-monto">S/ {tOut.toFixed(2)}</p></div>
+            <div className="stat"><span>Ingresos</span><p>S/ {tIn.toFixed(2)}</p></div>
+            <div className="stat"><span>Ahorro</span><p style={{color:'#bb86fc'}}>S/ {ahorro.toFixed(2)}</p></div>
           </div>
         </div>
 
         <div className="input-section">
           <div className="quick-tags">
             {tags.map((t, i) => (
-              <button 
-                key={i} 
-                onClick={() => setNombre(t)} 
-                onContextMenu={(e) => { e.preventDefault(); editarTag(i); }} 
-                className="tag-btn"
-              >
-                {t}
-              </button>
+              <button key={i} onClick={() => setNombre(t)} onContextMenu={(e)=>{e.preventDefault(); editarTag(i);}} className="tag-btn">{t}</button>
             ))}
           </div>
           <input type="text" placeholder="Detalle" value={nombre} onChange={e => setNombre(e.target.value)} />
@@ -175,8 +175,8 @@ function App() {
         </div>
 
         <div className="history-list">
-          <input className="search-bar" type="text" placeholder="🔍 Buscar..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
-          {stats.filtrados.map(m => (
+          <input className="search-bar" type="text" placeholder="🔍 Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+          {filtrados.map(m => (
             <div key={m.id} className="history-item">
               <div className="item-info"><strong>{m.nombre}</strong><span>{m.hora}</span></div>
               <div className="item-right">
