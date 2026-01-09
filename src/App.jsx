@@ -18,18 +18,20 @@ function App() {
   const [vistaMensual, setVistaMensual] = useState(false);
   const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
 
-  // 1. Manejo de Usuario y Persistencia de Sesión
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
-        const docRef = doc(db, "config_usuario", u.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setTags(docSnap.data().tags);
-        } else {
-          // Usa setDoc para inicializar tags si no existen
-          await setDoc(docRef, { tags: ["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"] });
+        try {
+          const docRef = doc(db, "config_usuario", u.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setTags(docSnap.data().tags);
+          } else {
+            await setDoc(docRef, { tags: ["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"] });
+          }
+        } catch (err) {
+          console.error("Error preferencias:", err);
         }
       } else {
         setUser(null);
@@ -40,7 +42,6 @@ function App() {
     return () => unsub();
   }, []);
 
-  // 2. Escucha de Movimientos en Tiempo Real
   useEffect(() => {
     if (!user) return;
     const q = query(collection(db, "movimientos"), where("uid", "==", user.uid));
@@ -52,54 +53,52 @@ function App() {
   }, [user]);
 
   const registrar = async (tipo) => {
-    if (!nombre || !monto || !user) return alert("Faltan datos");
+    if (!nombre || !monto || !user) return alert("Completa los datos");
     try {
       await addDoc(collection(db, "movimientos"), {
         uid: user.uid,
-        nombre: nombre,
+        nombre: nombre.trim(),
         monto: parseFloat(monto),
         tipo: tipo,
         fecha: new Date().toLocaleDateString('en-CA'),
         hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         createdAt: Date.now()
       });
-      // LIMPIEZA DE CAJAS
       setNombre('');
       setMonto('');
-    } catch (error) {
-      console.error("Error al registrar:", error);
+    } catch (err) {
+      console.error("Error registro:", err);
     }
   };
 
-  const manejarLogin = async () => {
+  const login = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-      alert("Sesión iniciada");
-    } catch (error) {
-      console.error("Error Login:", error);
+      alert("¡Sesión iniciada!");
+    } catch (err) {
+      console.error("Error login:", err); // <-- Aquí usamos 'err' para que no salga error
+      alert("Error en login. Verifique consola.");
     }
   };
 
   const exportarPDF = () => {
-    // Aquí usamos jsPDF para que no marque error en el import
     const docPDF = new jsPDF();
     docPDF.text("Reporte de Finanzas", 14, 20);
-    const tablaData = filtrados.map(m => [m.fecha, m.nombre, m.tipo.toUpperCase(), `S/ ${m.monto.toFixed(2)}`]);
-    docPDF.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: tablaData, startY: 30 });
-    docPDF.save("Reporte.pdf");
+    const data = filtrados.map(m => [m.fecha, m.nombre, m.tipo.toUpperCase(), `S/ ${m.monto.toFixed(2)}`]);
+    docPDF.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: data, startY: 30 });
+    docPDF.save("Reporte_Finanzas.pdf");
   };
 
   const editarTag = async (i) => {
     const n = prompt("Edita tu botón:", tags[i]);
     if (n && user) {
-      const nuevosTags = [...tags];
-      nuevosTags[i] = n;
-      setTags(nuevosTags);
-      await setDoc(doc(db, "config_usuario", user.uid), { tags: nuevosTags });
+      const nt = [...tags];
+      nt[i] = n;
+      setTags(nt);
+      await setDoc(doc(db, "config_usuario", user.uid), { tags: nt });
     }
   };
 
-  // Cálculos sin useMemo para evitar errores del compilador
   const filtrados = movimientos.filter(m => {
     const matchFecha = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
     return matchFecha && m.nombre.toLowerCase().includes(busqueda.toLowerCase());
@@ -110,11 +109,10 @@ function App() {
   const bal = tIn - tOut;
   const ahorro = bal > 0 ? bal : 0;
   const totalG = tIn + tOut + ahorro;
-
   const pOut = totalG > 0 ? (tOut / totalG) * 360 : 0;
   const pIn = totalG > 0 ? (tIn / totalG) * 360 : 0;
 
-  if (loading) return <div className="loading">Cargando...</div>;
+  if (loading) return <div style={{color:'white', textAlign:'center', marginTop:'20%'}}>Cargando datos...</div>;
 
   return (
     <div className="main-container">
@@ -122,16 +120,11 @@ function App() {
         <header className="app-header">
           <div className="header-left">
             <h2>Finanzas</h2>
-            <input 
-              className="mini-date-picker" 
-              type={vistaMensual ? "month" : "date"} 
-              value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro} 
-              onChange={e => setFechaFiltro(e.target.value)} 
-            />
+            <input className="mini-date-picker" type={vistaMensual ? "month" : "date"} value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro} onChange={e => setFechaFiltro(e.target.value)} />
           </div>
           <div className="header-btns">
             {!user ? (
-              <button onClick={manejarLogin} className="btn-google-login-oficial">Login</button>
+              <button className="btn-google-login-oficial" onClick={login}>Login</button>
             ) : (
               <img src={user.photoURL} alt="u" className="mini-avatar" onClick={() => signOut(auth)} />
             )}
@@ -141,11 +134,7 @@ function App() {
         </header>
 
         <div className="main-card donut-area">
-          <div className="circle-chart-multi" style={{
-            background: totalG > 0 
-              ? `conic-gradient(#ff4757 0deg ${pOut}deg, #00d1b2 ${pOut}deg ${pOut + pIn}deg, #bb86fc ${pOut + pIn}deg 360deg)` 
-              : '#222'
-          }}>
+          <div className="circle-chart-multi" style={{ background: totalG > 0 ? `conic-gradient(#ff4757 0deg ${pOut}deg, #00d1b2 ${pOut}deg ${pOut + pIn}deg, #bb86fc ${pOut + pIn}deg 360deg)` : '#222' }}>
             <div className="inner-circle">
               <div className="chart-info">
                 <p>S/ {bal.toFixed(2)}</p>
