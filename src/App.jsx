@@ -1,124 +1,151 @@
 import React, { useState, useEffect } from 'react';
-import { db, auth, googleProvider } from './firebase';
-import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
-import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-
-// Lógica de stickers sugeridos (solo si el usuario no pone uno)
-const getSticker = (texto) => {
-  const emojiRegex = /\p{Emoji}/u;
-  if (emojiRegex.test(texto)) return ''; // Si el usuario ya puso sticker, no hacemos nada
-  const t = texto.toLowerCase();
-  if (t.includes('comida')) return '🍴 ';
-  if (t.includes('gnv') || t.includes('gas')) return '⛽ ';
-  if (t.includes('diversion')) return '🎬 ';
-  return '📝 ';
-};
+import './App.css';
 
 function App() {
-  const [user, setUser] = useState(null);
+  const [movimientos, setMovimientos] = useState(() => {
+    const datos = localStorage.getItem('finanzas_v7');
+    return datos ? JSON.parse(datos) : [];
+  });
+
+  const [nombre, setNombre] = useState('');
   const [monto, setMonto] = useState('');
-  const [detalle, setDetalle] = useState('');
-  const [movimientos, setMovimientos] = useState([]);
-  const [fechaSeleccionada, setFechaSeleccionada] = useState("2026-01-09");
+  const [busqueda, setBusqueda] = useState('');
+  const [vistaMensual, setVistaMensual] = useState(false);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
-    return () => unsub();
-  }, []);
+    localStorage.setItem('finanzas_v7', JSON.stringify(movimientos));
+  }, [movimientos]);
 
-  useEffect(() => {
-    if (!user) return;
-    const q = query(collection(db, "movimientos"), where("uid", "==", user.uid));
-    const unsub = onSnapshot(q, (snap) => {
-      setMovimientos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-    return () => unsub();
-  }, [user]);
+  const registrar = (tipo) => {
+    if (!nombre || !monto) return alert("Escribe detalle y monto");
+    const ahora = new Date();
+
+    const nuevo = { 
+      id: Date.now().toString(), 
+      nombre: nombre, // Se guarda exactamente lo que el usuario escribió o pulsó
+      monto: parseFloat(monto), 
+      tipo, 
+      fecha: ahora.toLocaleDateString(),
+      hora: ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setMovimientos(prev => [nuevo, ...prev]);
+    setNombre(''); setMonto('');
+  };
 
   const exportarPDF = () => {
     const doc = new jsPDF();
-    doc.text("Reporte de Gastos", 14, 15);
-    const data = movimientos.map(m => [m.detalle, m.tipo, `S/ ${m.monto}`]);
-    doc.autoTable({ head: [['Detalle', 'Tipo', 'Monto']], body: data, startY: 20 });
-    doc.save("finanzas.pdf");
+    doc.text(vistaMensual ? "Reporte Mensual" : "Reporte Diario", 14, 15);
+    const tableData = datosFiltrados.map(m => [m.fecha, m.nombre, m.tipo, `S/ ${m.monto.toFixed(2)}`]);
+    doc.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: tableData, startY: 25 });
+    doc.save(`finanzas_${vistaMensual ? 'mes' : 'dia'}.pdf`);
   };
 
-  const agregar = async (tipo) => {
-    if (!monto || !detalle) return;
-    const sticker = getSticker(detalle);
-    await addDoc(collection(db, "movimientos"), {
-      monto: parseFloat(monto),
-      detalle: `${sticker}${detalle}`,
-      tipo,
-      fecha: fechaSeleccionada,
-      uid: user.uid
-    });
-    setMonto(''); setDetalle('');
+  const limpiarTodo = () => {
+    if (window.confirm("⚠️ ¿Borrar todos los registros?")) {
+      setMovimientos([]);
+    }
+  };
+
+  const hoy = new Date().toLocaleDateString();
+  const datosFiltrados = movimientos
+    .filter(m => vistaMensual ? true : m.fecha === hoy)
+    .filter(m => m.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+
+  const totalIn = datosFiltrados.filter(m => m.tipo === 'ingreso').reduce((acc, m) => acc + m.monto, 0);
+  const totalOut = datosFiltrados.filter(m => m.tipo === 'gasto').reduce((acc, m) => acc + m.monto, 0);
+  const ahorro = totalIn - totalOut;
+
+  const totalG = totalIn + totalOut + (ahorro > 0 ? ahorro : 0);
+  const pOut = totalG > 0 ? (totalOut / totalG) * 360 : 0;
+  const pIn = totalG > 0 ? (totalIn / totalG) * 360 : 0;
+
+  const graficoEstilo = {
+    background: totalG > 0 
+      ? `conic-gradient(#ff4757 0deg ${pOut}deg, #00d1b2 ${pOut}deg ${pOut + pIn}deg, #bb86fc ${pOut + pIn}deg 360deg)`
+      : `#222` 
   };
 
   return (
     <div className="main-container">
       <div className="phone-screen">
-        <div className="app-header">
-          <h2>Detalle Día</h2>
+        
+        <header className="app-header">
+          <h2>{vistaMensual ? "Resumen Mes" : "Detalle Día"}</h2>
           <div className="header-btns">
-            <button className="btn-switch">📊</button>
-            <button className="btn-switch">📅</button>
+            <button className="btn-switch" onClick={() => setVistaMensual(!vistaMensual)}>
+              {vistaMensual ? "Ver Hoy" : "Ver Mes"}
+            </button>
+            <button className="btn-clear" onClick={limpiarTodo}>Limpiar</button>
           </div>
-        </div>
-
-        {!user ? (
-          <button className="btn-login" onClick={() => signInWithPopup(auth, googleProvider)}>🚀 Sincronizar con Google</button>
-        ) : (
-          <div className="user-profile">
-            <img src={user.photoURL} alt="u" />
-            <span>{user.displayName}</span>
-            <button className="btn-logout" onClick={() => signOut(auth)}>Salir</button>
-          </div>
-        )}
-
-        <div className="date-selector">
-          <p className="edit-hint">✨ Pulsa la fecha para ver por día o mes</p>
-          <input type="date" value={fechaSeleccionada} onChange={(e) => setFechaSeleccionada(e.target.value)} />
-        </div>
+        </header>
 
         <div className="main-card">
-          <div className="circle-chart-multi" style={{background: 'conic-gradient(#bb86fc 0% 70%, #00d1b2 70% 100%)'}}>
+          <div className="circle-chart-multi" style={graficoEstilo}>
             <div className="inner-circle">
-               <div className="chart-info"><p>S/ 0.00</p><span>Balance</span></div>
+              <div className="chart-info">
+                <p>S/ {ahorro.toFixed(2)}</p>
+                <span>Balance</span>
+              </div>
             </div>
           </div>
           <div className="dashboard-stats">
-            <div className="stat"><p>S/ 0.00</p><span>Gastos</span></div>
-            <div className="stat"><p>S/ 0.00</p><span>Ingresos</span></div>
+            <div className="stat"><span className="dot out"></span><span>Gastos</span><p>S/ {totalOut.toFixed(2)}</p></div>
+            <div className="stat"><span className="dot in"></span><span>Ingresos</span><p>S/ {totalIn.toFixed(2)}</p></div>
+            <div className="stat"><span className="dot save"></span><span>Ahorro</span><p>S/ {ahorro.toFixed(2)}</p></div>
           </div>
           <button className="btn-pdf" onClick={exportarPDF}>📄 Exportar PDF</button>
         </div>
 
         <div className="input-section">
-          <p className="edit-hint">💡 Pulsa aquí para registrar un movimiento</p>
+          {/* AVISO SOLICITADO */}
+          <p className="edit-hint">✨ Pulse para editar palabras o registrar manual</p>
           <div className="quick-tags">
-            {['GNV', 'Comida', 'Diversión', 'Generé'].map(t => (
-              <button key={t} className="tag-btn" onClick={() => setDetalle(t)}>{t}</button>
+            {["GNV", "Comida", "Diversión", "Generé"].map(cat => (
+              <button key={cat} onClick={() => setNombre(cat)} className="tag-btn">{cat}</button>
             ))}
           </div>
-          <input type="text" placeholder="Detalle (ej. Comida)" value={detalle} onChange={(e)=>setDetalle(e.target.value)} />
-          <input type="number" placeholder="Monto S/" value={monto} onChange={(e)=>setMonto(e.target.value)} />
+          <input 
+            type="text" 
+            placeholder="Escribe detalle o usa sticker..." 
+            value={nombre} 
+            onChange={e => setNombre(e.target.value)} 
+          />
+          <input 
+            type="number" 
+            placeholder="Monto S/" 
+            value={monto} 
+            onChange={e => setMonto(e.target.value)} 
+          />
           <div className="btn-group-direct">
-            <button className="btn-direct in" onClick={() => agregar('ingreso')}>💰 Ingreso</button>
-            <button className="btn-direct out" onClick={() => agregar('gasto')}>💸 Gasto</button>
+            <button onClick={() => registrar('ingreso')} className="btn-direct in">💰 Ingreso</button>
+            <button onClick={() => registrar('gasto')} className="btn-direct out">💸 Gasto</button>
           </div>
         </div>
 
+        <div className="search-box">
+          <input 
+            type="text" 
+            placeholder="🔍 Buscar movimiento..." 
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+        </div>
+
         <div className="history-list">
-          {movimientos.map(m => (
+          {datosFiltrados.map(m => (
             <div key={m.id} className="history-item">
-              <div className="item-info"><strong>{m.detalle}</strong><span>{m.fecha}</span></div>
+              <div className={`icon-box ${m.tipo}`}>{m.tipo === 'ingreso' ? '💰' : '💸'}</div>
+              <div className="item-info">
+                <strong>{m.nombre}</strong>
+                <span>{m.fecha} · {m.hora}</span>
+              </div>
               <div className="item-right">
-                <span className={`item-amount ${m.tipo}`}>S/ {m.monto}</span>
-                <button className="delete-btn" onClick={() => deleteDoc(doc(db, "movimientos", m.id))}>×</button>
+                <span className={`item-amount ${m.tipo}`}>
+                  S/ {m.monto.toFixed(2)}
+                </span>
+                <button className="delete-btn" onClick={() => setMovimientos(prev => prev.filter(x => x.id !== m.id))}>&times;</button>
               </div>
             </div>
           ))}
@@ -127,4 +154,5 @@ function App() {
     </div>
   );
 }
+
 export default App;
