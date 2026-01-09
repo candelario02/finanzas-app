@@ -25,86 +25,68 @@ function App() {
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Estados de entrada
+  // Estados para las cajas de texto
   const [nombre, setNombre] = useState('');
   const [monto, setMonto] = useState('');
   
-  // Filtros y Buscador
+  // Filtros
   const [busqueda, setBusqueda] = useState('');
   const [vistaMensual, setVistaMensual] = useState(false);
   const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
 
-  // 1. Persistencia Robusta (No pierde datos al refrescar)
+  // 1. PERSISTENCIA: Esto evita que los datos desaparezcan al refrescar la página
   useEffect(() => {
-    const sesion = async () => {
+    const authSincronizada = async () => {
       try {
         await setPersistence(auth, browserLocalPersistence);
-        onAuthStateChanged(auth, (u) => {
-          setUser(u || null);
+        const unsub = onAuthStateChanged(auth, (u) => {
+          setUser(u);
+          if (!u) setMovimientos([]); 
           setLoading(false);
         });
-      } catch {
+        return unsub;
+      } catch (error) {
         setLoading(false);
       }
     };
-    sesion();
+    authSincronizada();
   }, []);
 
-  // 2. Sincronización Real-Time
+  // 2. ESCUCHA REAL-TIME: Conecta con tu base de datos de Firebase
   useEffect(() => {
     if (!user) return;
     const q = query(collection(db, "movimientos"), where("uid", "==", user.uid));
-    const unsub = onSnapshot(q, (snap) => {
-      const docs = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+    const unsubSnap = onSnapshot(q, (snapshot) => {
+      const docs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
       setMovimientos(docs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
     });
-    return () => unsub();
+    return () => unsubSnap();
   }, [user]);
 
-  // 3. Lógica de la Dona (Ingreso, Gasto y Ahorro Morado)
+  // 3. CÁLCULOS Y DISEÑO (Dona con Ahorro Morado)
   const stats = useMemo(() => {
     const filtrados = movimientos.filter(m => {
-      const matchFecha = vistaMensual 
-        ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) 
-        : m.fecha === fechaFiltro;
+      const matchFecha = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
       return matchFecha && m.nombre.toLowerCase().includes(busqueda.toLowerCase());
     });
 
     const tIn = filtrados.filter(m => m.tipo === 'ingreso').reduce((a, b) => a + b.monto, 0);
     const tOut = filtrados.filter(m => m.tipo === 'gasto').reduce((a, b) => a + b.monto, 0);
     const bal = tIn - tOut;
-    
-    // Ahorro: Si el balance es positivo, se considera ahorro
     const ahorro = bal > 0 ? bal : 0;
-    const totalGrafica = tIn + tOut + ahorro;
+    const totalG = tIn + tOut + ahorro;
     
-    const pOut = totalGrafica > 0 ? (tOut / totalGrafica) * 360 : 0;
-    const pIn = totalGrafica > 0 ? (tIn / totalGrafica) * 360 : 0;
+    const pOut = totalG > 0 ? (tOut / totalG) * 360 : 0;
+    const pIn = totalG > 0 ? (tIn / totalG) * 360 : 0;
 
     return { filtrados, tIn, tOut, bal, ahorro, pOut, pIn };
   }, [movimientos, vistaMensual, fechaFiltro, busqueda]);
 
-  // 4. Funciones de Usuario con Avisos
-  const login = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-      alert("¡Bienvenido de nuevo!");
-    } catch {
-      alert("Error al ingresar");
-    }
-  };
-
-  const logout = () => {
-    if (window.confirm("¿Estás seguro de que quieres cerrar sesión?")) {
-      signOut(auth);
-    }
-  };
-
-  // 5. Registro y Limpieza Instantánea
+  // 4. REGISTRAR Y LIMPIAR CAJAS AL INSTANTE
   const registrar = async (tipo) => {
-    if (!nombre || !monto || !user) return;
+    if (!nombre || !monto || !user) return alert("Inicia sesión y llena los datos");
     
-    const data = {
+    const nuevo = {
       uid: user.uid,
       nombre: nombre.trim(),
       monto: parseFloat(monto),
@@ -114,32 +96,29 @@ function App() {
       createdAt: Date.now()
     };
 
-    setNombre(''); 
+    // LIMPIEZA INMEDIATA
+    setNombre('');
     setMonto('');
 
     try {
-      await addDoc(collection(db, "movimientos"), data);
+      await addDoc(collection(db, "movimientos"), nuevo);
     } catch {
-      alert("Error de conexión con Firebase");
+      alert("Error al guardar en la nube");
     }
   };
 
-  // 6. Exportación PDF (Recuperada)
+  const login = () => signInWithPopup(auth, googleProvider);
+  const logout = () => window.confirm("¿Cerrar sesión?") && signOut(auth);
+
   const exportarPDF = () => {
     const docPDF = new jsPDF();
-    docPDF.setFontSize(18);
-    docPDF.text("Reporte de Finanzas - " + (user?.displayName || "Usuario"), 14, 20);
-    const rows = stats.filtrados.map(m => [m.fecha, m.nombre, m.tipo, `S/ ${m.monto.toFixed(2)}`]);
-    docPDF.autoTable({
-      head: [['Fecha', 'Detalle', 'Tipo', 'Monto']],
-      body: rows,
-      startY: 30,
-      theme: 'grid'
-    });
+    docPDF.text("Reporte Finanzas - " + user?.displayName, 14, 15);
+    const data = stats.filtrados.map(m => [m.fecha, m.nombre, m.tipo, `S/ ${m.monto.toFixed(2)}`]);
+    docPDF.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: data, startY: 25 });
     docPDF.save(`Reporte_${fechaFiltro}.pdf`);
   };
 
-  if (loading) return <div className="loading-screen">Conectando con Firebase...</div>;
+  if (loading) return <div className="loading-screen">Sincronizando...</div>;
 
   return (
     <div className="main-container">
@@ -147,9 +126,7 @@ function App() {
         <header className="app-header">
           <div className="header-left">
             <h2>Finanzas</h2>
-            <input className="mini-date-picker" type={vistaMensual ? "month" : "date"} 
-              value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro} 
-              onChange={e => setFechaFiltro(e.target.value)} />
+            <input className="mini-date-picker" type={vistaMensual ? "month" : "date"} value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro} onChange={e => setFechaFiltro(e.target.value)} />
           </div>
           <div className="header-btns">
             {!user ? (
@@ -182,7 +159,7 @@ function App() {
 
         <div className="input-section">
           <div className="quick-tags">
-            {["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"].map(t => (
+            {["GNV ⛽", "Comida 🍔", "Generé 💰"].map(t => (
               <button key={t} onClick={() => setNombre(t)} className="tag-btn">{t}</button>
             ))}
           </div>
