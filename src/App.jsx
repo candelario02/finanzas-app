@@ -17,7 +17,7 @@ function App() {
   const [vistaMensual, setVistaMensual] = useState(false);
   const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
 
-  // 1. Manejo de Usuario y Carga de Tags desde Firebase
+  // 1. Manejo de Usuario y Carga de Tags
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
@@ -36,28 +36,9 @@ function App() {
       }
     });
     return () => unsub();
-  }, []); // Quitamos 'user' de aquí para evitar bucles de alerta
+  }, []);
 
-  // 2. Guardar Tags en Firebase
-  const guardarTagsEnNube = async (nuevosTags) => {
-    if (user) {
-      try {
-        await setDoc(doc(db, "config_usuario", user.uid), { tags: nuevosTags });
-      } catch (e) { console.error("Error al guardar tags:", e); }
-    }
-  };
-
-  const editarTag = (i) => {
-    const n = prompt("Edita tu botón:", tags[i]);
-    if (n !== null && n.trim() !== "") {
-      const nt = [...tags];
-      nt[i] = n;
-      setTags(nt);
-      guardarTagsEnNube(nt);
-    }
-  };
-
-  // 3. Escucha de Movimientos
+  // 2. Escucha de Movimientos
   useEffect(() => {
     if (!user?.uid) return;
     const q = query(collection(db, "movimientos"), where("uid", "==", user.uid));
@@ -66,7 +47,7 @@ function App() {
       setMovimientos(docs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
     });
     return () => unsub();
-  }, [user?.uid]);
+  }, [user]);
 
   const registrar = async (tipo) => {
     if (!nombre || !monto || !user) return alert("Falta detalle, monto o sesión");
@@ -80,10 +61,12 @@ function App() {
         hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         createdAt: Date.now()
       });
-      // LIMPIEZA DE CAJAS
+      // LIMPIEZA AUTOMÁTICA DE CAJAS
       setNombre(''); 
       setMonto('');
-    } catch (e) { console.error(e); }
+    } catch (err) { 
+      console.error("Error al registrar:", err); 
+    }
   };
 
   const stats = useMemo(() => {
@@ -104,24 +87,38 @@ function App() {
   }, [movimientos, vistaMensual, fechaFiltro, busqueda]);
 
   const exportarPDF = () => {
-    if (window.confirm("¿Estás seguro de querer ver en PDF?")) {
-      const docGenerado = new jsPDF(); // Cambiado nombre para evitar error con 'doc' de Firebase
-      docGenerado.text("Reporte de Finanzas", 14, 20);
+    if (window.confirm("¿Deseas descargar el reporte PDF?")) {
+      const docPDF = new jsPDF();
+      docPDF.text("Reporte de Finanzas", 14, 20);
       const data = stats.filtrados.map(m => [m.fecha, m.nombre, m.tipo.toUpperCase(), `S/ ${m.monto.toFixed(2)}`]);
-      docGenerado.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: data, startY: 30 });
-      docGenerado.save(`Reporte_Finanzas.pdf`);
+      docPDF.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: data, startY: 30 });
+      docPDF.save(`Reporte_Finanzas.pdf`);
     }
   };
 
-  const logout = () => {
-    if (window.confirm("¿Estás seguro que quieres salir?")) signOut(auth);
+  const editarTag = (i) => {
+    const n = prompt("Edita tu botón:", tags[i]);
+    if (n !== null && n.trim() !== "") {
+      const nt = [...tags];
+      nt[i] = n;
+      setTags(nt);
+      if (user) setDoc(doc(db, "config_usuario", user.uid), { tags: nt });
+    }
   };
 
   return (
     <div className="main-container">
       <div className="phone-screen">
         <header className="app-header">
-          <h2>Finanzas</h2>
+          <div className="header-left">
+            <h2>Finanzas</h2>
+            <input 
+              className="mini-date-picker" 
+              type={vistaMensual ? "month" : "date"} 
+              value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro} 
+              onChange={e => setFechaFiltro(e.target.value)} 
+            />
+          </div>
           <div className="header-btns">
             {!user ? (
               <button className="btn-google-login-oficial" onClick={() => signInWithPopup(auth, googleProvider)}>
@@ -129,26 +126,14 @@ function App() {
                 Login
               </button>
             ) : (
-              <img src={user.photoURL} alt="u" className="mini-avatar" onClick={logout} title="Cerrar sesión" />
+              <img src={user.photoURL} alt="u" className="mini-avatar" onClick={() => signOut(auth)} />
             )}
             <button className="btn-icon" onClick={exportarPDF}>📄</button>
-            <button className="btn-icon" onClick={() => setVistaMensual(!vistaMensual)}>
-              {vistaMensual ? "📅" : "🗓️"}
-            </button>
+            <button className="btn-icon" onClick={() => setVistaMensual(!vistaMensual)}>{vistaMensual ? "📅" : "🗓️"}</button>
           </div>
         </header>
 
-        <div className="date-selector-area">
-          <label>{vistaMensual ? "Mes:" : "Día:"}</label>
-          <input 
-            className="date-input" 
-            type={vistaMensual ? "month" : "date"} 
-            value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro} 
-            onChange={e => setFechaFiltro(e.target.value)} 
-          />
-        </div>
-
-        <div className="main-card">
+        <div className="main-card donut-area">
           <div className="circle-chart-multi" style={{
             background: (stats.tIn + stats.tOut + stats.ahorro) > 0 
               ? `conic-gradient(#ff4757 0deg ${stats.pOut}deg, #00d1b2 ${stats.pOut}deg ${stats.pOut + stats.pIn}deg, #bb86fc ${stats.pOut + stats.pIn}deg 360deg)` 
@@ -157,19 +142,18 @@ function App() {
             <div className="inner-circle">
               <div className="chart-info">
                 <p>S/ {stats.bal.toFixed(2)}</p>
-                <span>Balance del {vistaMensual ? "Mes" : "Día"}</span>
+                <span>Balance {vistaMensual ? "Mensual" : "Diario"}</span>
               </div>
             </div>
           </div>
           <div className="dashboard-stats">
             <div className="stat"><span className="gasto-label">Gastos</span><p className="gasto-monto">S/ {stats.tOut.toFixed(2)}</p></div>
             <div className="stat"><span>Ingresos</span><p>S/ {stats.tIn.toFixed(2)}</p></div>
-            <div className="stat"><span>Ahorro</span><p style={{color: 'var(--accent)'}}>S/ {stats.ahorro.toFixed(2)}</p></div>
+            <div className="stat"><span>Ahorro</span><p style={{color: '#bb86fc'}}>S/ {stats.ahorro.toFixed(2)}</p></div>
           </div>
         </div>
 
         <div className="input-section">
-          <p className="edit-hint">✨ Mantén pulsado para editar favoritos</p>
           <div className="quick-tags">
             {tags.map((t, i) => (
               <button 
@@ -190,14 +174,10 @@ function App() {
           </div>
         </div>
 
-        <div className="search-box">
-          <input type="text" placeholder="🔍 Buscar..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
-        </div>
-
         <div className="history-list">
+          <input className="search-bar" type="text" placeholder="🔍 Buscar..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
           {stats.filtrados.map(m => (
             <div key={m.id} className="history-item">
-              <div className={`icon-box ${m.tipo}`}>{m.tipo === 'ingreso' ? '💰' : '💸'}</div>
               <div className="item-info"><strong>{m.nombre}</strong><span>{m.hora}</span></div>
               <div className="item-right">
                 <span className={`item-amount ${m.tipo}`}>S/ {m.monto.toFixed(2)}</span>
