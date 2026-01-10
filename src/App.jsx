@@ -2,7 +2,12 @@ import React, { useState, useEffect, useMemo } from "react";
 import "./App.css";
 import { db, auth, googleProvider } from "./firebase";
 
-import { signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
+import {
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+} from "firebase/auth";
+
 import {
   collection,
   addDoc,
@@ -18,8 +23,12 @@ import {
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
+/* eslint-disable no-unused-vars */
+
 function App() {
-  /* ======================= STATES ======================= */
+  /* =======================
+     STATES
+  ======================= */
   const [user, setUser] = useState(null);
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,12 +36,6 @@ function App() {
 
   const [nombre, setNombre] = useState("");
   const [monto, setMonto] = useState("");
-  const [busqueda, setBusqueda] = useState("");
-
-  const [vistaMensual, setVistaMensual] = useState(false);
-  const [fechaFiltro, setFechaFiltro] = useState(
-    new Date().toLocaleDateString("en-CA")
-  );
 
   const [tags, setTags] = useState([
     "GNV ⛽",
@@ -41,29 +44,45 @@ function App() {
     "Generé 💰",
   ]);
 
-  /* ======================= TOAST ======================= */
+  const [busqueda, setBusqueda] = useState("");
+  const [vistaMensual, setVistaMensual] = useState(false);
+  const [fechaFiltro, setFechaFiltro] = useState(
+    new Date().toLocaleDateString("en-CA")
+  );
+
+  /* =======================
+     TOAST
+  ======================= */
   const showToast = (msg, type = "info") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  /* ======================= AUTH ======================= */
+  /* =======================
+     AUTH
+  ======================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
-        const snap = await getDoc(doc(db, "config_usuarios", u.uid));
-        if (snap.exists()) setTags(snap.data().tags);
+        const ref = doc(db, "config_usuarios", u.uid);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          setTags(snap.data().tags);
+        }
       } else {
         setUser(null);
         setMovimientos([]);
       }
       setLoading(false);
     });
+
     return () => unsub();
   }, []);
 
-  /* ======================= DATA ======================= */
+  /* =======================
+     DATA REALTIME
+  ======================= */
   useEffect(() => {
     if (!user) return;
 
@@ -77,24 +96,28 @@ function App() {
         ...d.data(),
         id: d.id,
       }));
-      setMovimientos(data.sort((a, b) => b.createdAt - a.createdAt));
+      setMovimientos(
+        data.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      );
     });
 
     return () => unsub();
   }, [user]);
 
-  /* ======================= STATS + DONA ======================= */
+  /* =======================
+     STATS
+  ======================= */
   const stats = useMemo(() => {
     const filtrados = movimientos.filter((m) => {
-      const fechaOK = vistaMensual
-        ? m.fecha.startsWith(fechaFiltro.slice(0, 7))
+      const matchFecha = vistaMensual
+        ? m.fecha?.startsWith(fechaFiltro.substring(0, 7))
         : m.fecha === fechaFiltro;
 
-      const busqOK = m.nombre
-        .toLowerCase()
+      const matchBusqueda = m.nombre
+        ?.toLowerCase()
         .includes(busqueda.toLowerCase());
 
-      return fechaOK && busqOK;
+      return matchFecha && matchBusqueda;
     });
 
     const ing = filtrados
@@ -105,54 +128,53 @@ function App() {
       .filter((m) => m.tipo === "gasto")
       .reduce((a, b) => a + b.monto, 0);
 
-    const total = ing + gas || 1;
+    const bal = ing - gas;
+    const total = ing + gas + Math.max(bal, 0);
 
     return {
       filtrados,
       ing,
       gas,
-      bal: ing - gas,
-      pIng: (ing / total) * 360,
-      pGas: (gas / total) * 360,
+      bal,
+      pGas: total ? (gas / total) * 360 : 0,
+      pIng: total ? (ing / total) * 360 : 0,
     };
   }, [movimientos, vistaMensual, fechaFiltro, busqueda]);
 
-  /* ======================= ACTIONS ======================= */
+  /* =======================
+     ACTIONS
+  ======================= */
   const registrar = async (tipo) => {
-    if (!nombre || !monto) {
-      showToast("Completa los campos", "error");
-      return;
+    if (!nombre || !monto || !user) return;
+
+    try {
+      await addDoc(collection(db, "movimientos"), {
+        uid: user.uid,
+        nombre: nombre.trim(),
+        monto: parseFloat(monto),
+        tipo,
+        fecha: new Date().toLocaleDateString("en-CA"),
+        hora: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        createdAt: Date.now(),
+      });
+
+      setNombre("");
+      setMonto("");
+      showToast("Movimiento guardado", "success");
+    } catch {
+      showToast("Error al guardar", "error");
     }
-
-    await addDoc(collection(db, "movimientos"), {
-      uid: user.uid,
-      nombre,
-      monto: parseFloat(monto),
-      tipo,
-      fecha: new Date().toLocaleDateString("en-CA"),
-      hora: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      createdAt: Date.now(),
-    });
-
-    setNombre("");
-    setMonto("");
-    showToast("Movimiento guardado", "success");
-  };
-
-  const eliminar = async (id) => {
-    if (!window.confirm("¿Eliminar movimiento?")) return;
-    await deleteDoc(doc(db, "movimientos", id));
   };
 
   const editarTags = async () => {
     const nuevos = prompt(
-      "Edita tus categorías (separadas por coma):",
+      "Edita tus categorías separadas por coma:",
       tags.join(", ")
     );
-    if (!nuevos) return;
+    if (!nuevos || !user) return;
 
     const lista = nuevos.split(",").map((t) => t.trim());
     setTags(lista);
@@ -160,10 +182,8 @@ function App() {
   };
 
   const exportarPDF = () => {
-    if (stats.filtrados.length === 0) return;
-
     const pdf = new jsPDF();
-    pdf.text(`Reporte - ${user.displayName}`, 14, 20);
+    pdf.text(`Reporte Finanzas - ${user?.displayName}`, 14, 20);
     pdf.autoTable({
       startY: 30,
       head: [["Fecha", "Detalle", "Tipo", "Monto"]],
@@ -175,135 +195,192 @@ function App() {
       ]),
     });
     pdf.save("finanzas.pdf");
+    showToast("PDF generado", "success");
   };
 
-  /* ======================= UI ======================= */
-  if (loading) return <div className="loading-screen">Cargando...</div>;
+  /* =======================
+     RENDER
+  ======================= */
+  if (loading) {
+    return <div className="loading-screen">Sincronizando nube...</div>;
+  }
 
   return (
     <div className="main-container">
       <div className="phone-screen">
+
+        {/* HEADER */}
         <header className="app-header">
-          <h2>Finanzas</h2>
-          {!user ? (
-            <button onClick={() => signInWithPopup(auth, googleProvider)}>
-              Login
-            </button>
-          ) : (
-            <>
-              <button onClick={exportarPDF}>📄</button>
-              <img
-                src={user.photoURL}
-                alt="avatar"
-                className="mini-avatar"
-                onClick={() => signOut(auth)}
-              />
-            </>
-          )}
-        </header>
-
-        {user && (
-          <>
-            {/* ================= DONA ================= */}
-            <div
-              className="circle-chart-multi"
-              style={{
-                background: `conic-gradient(
-                  #00d1b2 0deg ${stats.pIng}deg,
-                  #ff4757 ${stats.pIng}deg ${stats.pIng + stats.pGas}deg,
-                  #222 ${stats.pIng + stats.pGas}deg 360deg
-                )`,
-              }}
-            >
-              <div className="inner-circle">
-                <div className="chart-info">
-                  <p>S/ {stats.bal.toFixed(2)}</p>
-                  <span>Balance</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="dashboard-stats">
-              <div className="stat">
-                <span>Gastos</span>
-                <p className="gasto-monto">S/ {stats.gas.toFixed(2)}</p>
-              </div>
-              <div className="stat">
-                <span>Ingresos</span>
-                <p>S/ {stats.ing.toFixed(2)}</p>
-              </div>
-              <div className="stat">
-                <span>Ahorro</span>
-                <p>S/ {stats.bal > 0 ? stats.bal.toFixed(2) : "0.00"}</p>
-              </div>
-            </div>
-
-            {/* ================= FORM ================= */}
+          <div className="header-left">
+            <h2>Finanzas</h2>
             <input
-              placeholder="Buscar..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-
-            <input
-              type="date"
-              value={fechaFiltro}
+              className="mini-date-picker"
+              type={vistaMensual ? "month" : "date"}
+              value={
+                vistaMensual
+                  ? fechaFiltro.substring(0, 7)
+                  : fechaFiltro
+              }
               onChange={(e) => setFechaFiltro(e.target.value)}
             />
+          </div>
 
-            <button onClick={() => setVistaMensual(!vistaMensual)}>
-              {vistaMensual ? "Vista diaria" : "Vista mensual"}
+          <div className="header-btns">
+            {!user ? (
+              <button
+                className="btn-google-mini"
+                onClick={async () => {
+                  await signInWithPopup(auth, googleProvider);
+                  showToast("Sesión iniciada", "success");
+                }}
+              >
+                Login
+              </button>
+            ) : (
+              <img
+                src={user.photoURL}
+                alt="u"
+                className="mini-avatar"
+                onClick={async () => {
+                  await signOut(auth);
+                  showToast("Sesión cerrada", "info");
+                }}
+              />
+            )}
+            <button className="btn-icon" onClick={exportarPDF}>
+              📄
             </button>
+            <button
+              className="btn-icon"
+              onClick={() => setVistaMensual(!vistaMensual)}
+            >
+              {vistaMensual ? "📅" : "🗓️"}
+            </button>
+          </div>
+        </header>
 
-            <div className="quick-tags">
-              {tags.map((t) => (
-                <button key={t} className="tag-btn" onClick={() => setNombre(t)}>
-                  {t}
-                </button>
-              ))}
-              <button className="tag-btn" onClick={editarTags}>✏️</button>
+        {/* DASHBOARD */}
+        <div className="main-card donut-area">
+          <div
+            className="circle-chart-multi"
+            style={{
+              background: `conic-gradient(
+                #ff4757 0deg ${stats.pGas}deg,
+                #00d1b2 ${stats.pGas}deg ${stats.pGas + stats.pIng}deg,
+                #a29bfe ${stats.pGas + stats.pIng}deg 360deg
+              )`,
+            }}
+          >
+            <div className="inner-circle">
+              <div className="chart-info">
+                <p>S/ {stats.bal.toFixed(2)}</p>
+                <span>
+                  {vistaMensual ? "Balance Mensual" : "Balance Diario"}
+                </span>
+              </div>
             </div>
+          </div>
 
-            <input
-              placeholder="Detalle"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-            />
-            <input
-              type="number"
-              placeholder="Monto"
-              value={monto}
-              onChange={(e) => setMonto(e.target.value)}
-            />
-
-            <div className="btn-group-direct">
-              <button className="btn-direct in" onClick={() => registrar("ingreso")}>
-                Ingreso
-              </button>
-              <button className="btn-direct out" onClick={() => registrar("gasto")}>
-                Gasto
-              </button>
+          <div className="dashboard-stats">
+            <div className="stat">
+              <span>Gastos</span>
+              <p className="gasto-monto">S/ {stats.gas.toFixed(2)}</p>
             </div>
+            <div className="stat">
+              <span>Ingresos</span>
+              <p>S/ {stats.ing.toFixed(2)}</p>
+            </div>
+            <div className="stat">
+              <span>Balance</span>
+              <p>S/ {stats.bal.toFixed(2)}</p>
+            </div>
+          </div>
+        </div>
 
-            {stats.filtrados.map((m) => (
-              <div key={m.id} className="history-item">
-                <div className="item-info">
-                  <strong>{m.nombre}</strong>
-                  <span>{m.fecha}</span>
-                </div>
-                <div className={`item-amount ${m.tipo}`}>
-                  S/ {m.monto}
-                </div>
-                <button className="delete-btn" onClick={() => eliminar(m.id)}>
-                  ✕
+        {/* INPUTS */}
+        <div className="input-section">
+          <div className="quick-tags">
+            {tags.map((t, i) => (
+              <button
+                key={i}
+                className="tag-btn"
+                onClick={() => setNombre(t)}
+              >
+                {t}
+              </button>
+            ))}
+            <button className="tag-btn-edit" onClick={editarTags}>
+              ⚙️
+            </button>
+          </div>
+
+          <input
+            placeholder="Detalle"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+          />
+
+          <input
+            type="number"
+            placeholder="Monto S/"
+            value={monto}
+            onChange={(e) => setMonto(e.target.value)}
+          />
+
+          <div className="btn-group-direct">
+            <button
+              className="btn-direct in"
+              onClick={() => registrar("ingreso")}
+            >
+              💰 Ingreso
+            </button>
+            <button
+              className="btn-direct out"
+              onClick={() => registrar("gasto")}
+            >
+              💸 Gasto
+            </button>
+          </div>
+        </div>
+
+        {/* HISTORIAL */}
+        <div className="history-list">
+          <input
+            className="search-bar"
+            placeholder="🔍 Buscar..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+
+          {stats.filtrados.map((m) => (
+            <div key={m.id} className="history-item">
+              <div className="item-info">
+                <strong>{m.nombre}</strong>
+                <span>{m.hora}</span>
+              </div>
+              <div className="item-right">
+                <span className={`item-amount ${m.tipo}`}>
+                  S/ {m.monto.toFixed(2)}
+                </span>
+                <button
+                  className="delete-btn"
+                  onClick={() =>
+                    deleteDoc(doc(db, "movimientos", m.id))
+                  }
+                >
+                  ×
                 </button>
               </div>
-            ))}
-          </>
-        )}
+            </div>
+          ))}
+        </div>
       </div>
 
-      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
+      {toast && (
+        <div className={`toast ${toast.type}`}>
+          {toast.msg}
+        </div>
+      )}
     </div>
   );
 }
