@@ -147,9 +147,26 @@ html, body, #root {
   padding-top: 15px;
 }
 
-.stat span { font-size: 0.75rem; opacity: 0.7; }
-.stat p { margin: 4px 0 0 0; font-weight: bold; font-size: 0.85rem; }
-.gasto-monto { color: var(--error); }
+.stat span { 
+  font-size: 0.75rem; 
+  opacity: 0.7; 
+  display: block;
+  margin-bottom: 4px;
+}
+.stat p { 
+  margin: 0; 
+  font-weight: bold; 
+  font-size: 0.9rem; 
+}
+.stat:nth-child(1) p { 
+  color: #ff4757; 
+}
+.stat:nth-child(2) p { 
+  color: #00d1b2; 
+}
+.stat:nth-child(3) p { 
+  color: #a29bfe; 
+}
 
 /* ==========================================================================
    INPUTS
