@@ -258,15 +258,18 @@ function App() {
     <div className="main-container">
       <div className="phone-screen">
         <header className="app-header">
-          <div className="header-left">
-            <h2>Finanzas</h2>
-            <input
-              className="mini-date-picker"
-              type={vistaMensual ? "month" : "date"}
-              value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro}
-              onChange={(e) => setFechaFiltro(e.target.value)}
-            />
-          </div>
+         <div className="header-left">
+  <h2>Finanzas CHC</h2>
+  <div className="date-select-wrapper">
+    <span className="calendar-mini-icon">📅</span> 
+    <input
+      className="mini-date-picker"
+      type={vistaMensual ? "month" : "date"}
+      value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro}
+      onChange={(e) => setFechaFiltro(e.target.value)}
+    />
+  </div>
+</div>
 
           <div className="header-btns">
             {!user ? (
@@ -283,13 +286,17 @@ function App() {
 
             {/* BOTÓN VISTA CON ETIQUETA DINÁMICA */}
             <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ fontSize: '10px', position: 'absolute', top: '-15px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                {vistaMensual ? "Ver Día" : "Ver Mes"}
-              </span>
-              <button className="btn-icon" onClick={() => setVistaMensual(!vistaMensual)}>
-                {vistaMensual ? "📅" : "🗓️"}
-              </button>
-            </div>
+  <span style={{ fontSize: '10px', position: 'absolute', top: '-15px', fontWeight: 'bold', whiteSpace: 'nowrap', color: vistaMensual ? '#bb86fc' : '#00d1b2' }}>
+    {vistaMensual ? "Ver Día" : "Ver Mes"}
+  </span>
+  <button 
+    className={`btn-icon ${vistaMensual ? 'border-mes' : 'border-dia'}`} 
+    onClick={() => setVistaMensual(!vistaMensual)}
+  >
+    {/* Iconos sugeridos: Sol para volver al día, Calendario para ir al mes */}
+    {vistaMensual ? "☀️" : "🗓️"}
+  </button>
+</div>
           </div>
         </header>
 

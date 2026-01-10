@@ -329,3 +329,24 @@ input, .search-bar {
   align-items: center;
   color: var(--accent);
 }
+/* Borde cuando estás en Vista Mensual (Color Morado) */
+.border-mes {
+  border: 2px solid #bb86fc !important;
+  background: rgba(187, 134, 252, 0.1) !important;
+  transition: all 0.3s ease;
+}
+
+/* Borde cuando estás en Vista Diaria (Color Verde) */
+.border-dia {
+  border: 2px solid #00d1b2 !important;
+  background: rgba(0, 209, 178, 0.1) !important;
+  transition: all 0.3s ease;
+}
+
+/* Ajuste para que el botón no se vea cuadrado */
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
