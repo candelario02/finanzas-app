@@ -263,7 +263,7 @@ function App() {
  <div className="header-left">
   <h2>Finanzas CHC</h2>
   <div className="date-select-container">
-    <span className="date-label">Ver X Dias:</span>
+    <span className="date-label">Ver X Dias</span>
     <div className="date-select-wrapper">
       <span className="calendar-mini-icon">📅</span> 
       <input
