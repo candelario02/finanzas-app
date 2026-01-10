@@ -54,7 +54,6 @@ function App() {
         setUser(u);
         const snap = await getDoc(doc(db, "config_usuarios", u.uid));
         if (snap.exists()) setTags(snap.data().tags);
-        showToast("Sesión iniciada", "success");
       } else {
         setUser(null);
         setMovimientos([]);
@@ -84,7 +83,7 @@ function App() {
     return () => unsub();
   }, [user]);
 
-  /* ======================= STATS ======================= */
+  /* ======================= STATS + DONA ======================= */
   const stats = useMemo(() => {
     const filtrados = movimientos.filter((m) => {
       const fechaOK = vistaMensual
@@ -106,11 +105,15 @@ function App() {
       .filter((m) => m.tipo === "gasto")
       .reduce((a, b) => a + b.monto, 0);
 
+    const total = ing + gas || 1;
+
     return {
       filtrados,
       ing,
       gas,
       bal: ing - gas,
+      pIng: (ing / total) * 360,
+      pGas: (gas / total) * 360,
     };
   }, [movimientos, vistaMensual, fechaFiltro, busqueda]);
 
@@ -142,7 +145,6 @@ function App() {
   const eliminar = async (id) => {
     if (!window.confirm("¿Eliminar movimiento?")) return;
     await deleteDoc(doc(db, "movimientos", id));
-    showToast("Eliminado", "info");
   };
 
   const editarTags = async () => {
@@ -155,14 +157,10 @@ function App() {
     const lista = nuevos.split(",").map((t) => t.trim());
     setTags(lista);
     await setDoc(doc(db, "config_usuarios", user.uid), { tags: lista });
-    showToast("Categorías actualizadas", "success");
   };
 
   const exportarPDF = () => {
-    if (stats.filtrados.length === 0) {
-      showToast("No hay datos", "error");
-      return;
-    }
+    if (stats.filtrados.length === 0) return;
 
     const pdf = new jsPDF();
     pdf.text(`Reporte - ${user.displayName}`, 14, 20);
@@ -179,41 +177,68 @@ function App() {
     pdf.save("finanzas.pdf");
   };
 
-  const cerrarSesion = async () => {
-    if (!window.confirm("¿Cerrar sesión?")) return;
-    await signOut(auth);
-  };
-
   /* ======================= UI ======================= */
   if (loading) return <div className="loading-screen">Cargando...</div>;
 
   return (
     <div className="main-container">
       <div className="phone-screen">
-
         <header className="app-header">
           <h2>Finanzas</h2>
-          <div>
-            {!user ? (
-              <button onClick={() => signInWithPopup(auth, googleProvider)}>
-                Login
-              </button>
-            ) : (
-              <>
-                <button onClick={exportarPDF}>📄</button>
-                <img
-                  src={user.photoURL}
-                  alt="avatar"
-                  className="mini-avatar"
-                  onClick={cerrarSesion}
-                />
-              </>
-            )}
-          </div>
+          {!user ? (
+            <button onClick={() => signInWithPopup(auth, googleProvider)}>
+              Login
+            </button>
+          ) : (
+            <>
+              <button onClick={exportarPDF}>📄</button>
+              <img
+                src={user.photoURL}
+                alt="avatar"
+                className="mini-avatar"
+                onClick={() => signOut(auth)}
+              />
+            </>
+          )}
         </header>
 
         {user && (
           <>
+            {/* ================= DONA ================= */}
+            <div
+              className="circle-chart-multi"
+              style={{
+                background: `conic-gradient(
+                  #00d1b2 0deg ${stats.pIng}deg,
+                  #ff4757 ${stats.pIng}deg ${stats.pIng + stats.pGas}deg,
+                  #222 ${stats.pIng + stats.pGas}deg 360deg
+                )`,
+              }}
+            >
+              <div className="inner-circle">
+                <div className="chart-info">
+                  <p>S/ {stats.bal.toFixed(2)}</p>
+                  <span>Balance</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="dashboard-stats">
+              <div className="stat">
+                <span>Gastos</span>
+                <p className="gasto-monto">S/ {stats.gas.toFixed(2)}</p>
+              </div>
+              <div className="stat">
+                <span>Ingresos</span>
+                <p>S/ {stats.ing.toFixed(2)}</p>
+              </div>
+              <div className="stat">
+                <span>Ahorro</span>
+                <p>S/ {stats.bal > 0 ? stats.bal.toFixed(2) : "0.00"}</p>
+              </div>
+            </div>
+
+            {/* ================= FORM ================= */}
             <input
               placeholder="Buscar..."
               value={busqueda}
@@ -230,13 +255,13 @@ function App() {
               {vistaMensual ? "Vista diaria" : "Vista mensual"}
             </button>
 
-            <div className="tags">
+            <div className="quick-tags">
               {tags.map((t) => (
-                <button key={t} onClick={() => setNombre(t)}>
+                <button key={t} className="tag-btn" onClick={() => setNombre(t)}>
                   {t}
                 </button>
               ))}
-              <button onClick={editarTags}>✏️</button>
+              <button className="tag-btn" onClick={editarTags}>✏️</button>
             </div>
 
             <input
@@ -251,21 +276,29 @@ function App() {
               onChange={(e) => setMonto(e.target.value)}
             />
 
-            <div className="acciones">
-              <button onClick={() => registrar("ingreso")}>Ingreso</button>
-              <button onClick={() => registrar("gasto")}>Gasto</button>
+            <div className="btn-group-direct">
+              <button className="btn-direct in" onClick={() => registrar("ingreso")}>
+                Ingreso
+              </button>
+              <button className="btn-direct out" onClick={() => registrar("gasto")}>
+                Gasto
+              </button>
             </div>
 
-            <ul>
-              {stats.filtrados.map((m) => (
-                <li key={m.id}>
-                  {m.nombre} - S/ {m.monto}
-                  <button onClick={() => eliminar(m.id)}>❌</button>
-                </li>
-              ))}
-            </ul>
-
-            <h3>Balance: S/ {stats.bal.toFixed(2)}</h3>
+            {stats.filtrados.map((m) => (
+              <div key={m.id} className="history-item">
+                <div className="item-info">
+                  <strong>{m.nombre}</strong>
+                  <span>{m.fecha}</span>
+                </div>
+                <div className={`item-amount ${m.tipo}`}>
+                  S/ {m.monto}
+                </div>
+                <button className="delete-btn" onClick={() => eliminar(m.id)}>
+                  ✕
+                </button>
+              </div>
+            ))}
           </>
         )}
       </div>
