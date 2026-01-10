@@ -222,15 +222,17 @@ function App() {
         docPDF.setFontSize(18);
         docPDF.text("Reporte de Finanzas", 14, 20);
         
+        // Limpiador rápido de emojis para que el PDF no falle al guardar
+        const limpiar = (t) => t.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
+
         const rows = stats.filtrados.map((m) => [
           m.fecha,
           m.hora || "--:--",
-          m.nombre,
+          limpiar(m.nombre),
           m.tipo.toUpperCase(),
           `S/ ${m.monto.toFixed(2)}`
         ]);
 
-        // USO CORREGIDO DE AUTOTABLE
         autoTable(docPDF, {
           startY: 30,
           head: [["Fecha", "Hora", "Detalle", "Tipo", "Monto"]],
@@ -272,10 +274,22 @@ function App() {
             ) : (
               <img src={user.photoURL} alt="u" className="mini-avatar" onClick={handleLogout} />
             )}
-            <button className="btn-icon" onClick={exportarPDF}>📄</button>
-            <button className="btn-icon" onClick={() => setVistaMensual(!vistaMensual)}>
-              {vistaMensual ? "📅" : "🗓️"}
-            </button>
+            
+            {/* BOTÓN PDF CON ETIQUETA */}
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <span style={{ fontSize: '10px', position: 'absolute', top: '-15px', fontWeight: 'bold' }}>PDF</span>
+              <button className="btn-icon" onClick={exportarPDF}>📄</button>
+            </div>
+
+            {/* BOTÓN VISTA CON ETIQUETA DINÁMICA */}
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <span style={{ fontSize: '10px', position: 'absolute', top: '-15px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                {vistaMensual ? "Ver Día" : "Ver Mes"}
+              </span>
+              <button className="btn-icon" onClick={() => setVistaMensual(!vistaMensual)}>
+                {vistaMensual ? "📅" : "🗓️"}
+              </button>
+            </div>
           </div>
         </header>
 
@@ -286,7 +300,8 @@ function App() {
             <div className="inner-circle">
               <div className="chart-info">
                 <p>S/ {stats.bal.toFixed(2)}</p>
-                <span>Balance</span>
+                {/* BALANCE DINÁMICO SEGÚN LA VISTA */}
+                <span>{vistaMensual ? "Balance del mes" : "Balance de hoy"}</span>
               </div>
             </div>
           </div>
@@ -341,7 +356,6 @@ function App() {
         </div>
       )}
 
-      {/* TOASTS (Alertas de error/éxito) */}
       {toast && (
         <div className="toast-overlay">
           <div className={`toast-box ${toast.type}`}>
