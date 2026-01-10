@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './App.css';
 import { db, auth, googleProvider } from './firebase';
+/* eslint-disable no-unused-vars */
+
+
 import {
   signInWithPopup,
   signOut,
