@@ -74,7 +74,7 @@ function App() {
         }
       } else {
         setUser(null);
-        setMovimientos([]); // Esto solo se ejecuta cuando el auth cambia, no causa bucle
+        setMovimientos([]);
       }
       setLoading(false);
     });
@@ -153,6 +153,7 @@ function App() {
     }
 
     try {
+      // USAMOS EL USER.UID ACTUAL
       await addDoc(collection(db, "movimientos"), {
         uid: user.uid,
         nombre: nombre.trim(),
