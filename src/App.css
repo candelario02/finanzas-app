@@ -41,7 +41,7 @@ html, body, #root {
 }
 
 /* ==========================================================================
-   HEADER
+   HEADER Y SELECTOR DE FECHA
    ========================================================================== */
 .app-header {
   display: flex;
@@ -55,51 +55,67 @@ html, body, #root {
   gap: 12px;
 }
 
-.mini-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 2px solid var(--accent);
-  cursor: pointer;
-  object-fit: cover;
-}
-
-.btn-icon {
-  background: #1a1a1a;
-  border: none;
-  padding: 8px;
-  border-radius: 10px;
-  font-size: 1.2rem;
-  cursor: pointer;
-}
-
-.btn-wrapper {
-  position: relative;
+.date-select-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: 4px;
 }
 
-.btn-label {
-  position: absolute;
-  top: -16px;
-  font-size: 0.6rem;
-  font-weight: bold;
+.date-label {
+  font-size: 10px;
   text-transform: uppercase;
   color: var(--accent);
-  white-space: nowrap;
+  opacity: 0.8;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.date-select-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  width: fit-content;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative; /* Importante para el input invisible */
 }
 
 .mini-date-picker {
   background: transparent;
   border: none;
-  color: var(--accent);
+  color: white;
   font-size: 0.9rem;
   font-weight: bold;
+  cursor: pointer;
+  outline: none;
+  width: 110px;
+  font-family: inherit;
+}
+
+input[type="month"].mini-date-picker {
+  width: 130px;
+}
+
+/* Esconde el icono nativo pero mantiene la funcionalidad en toda la caja */
+.mini-date-picker::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.calendar-mini-icon {
+  font-size: 1rem;
+  pointer-events: none;
 }
 
 /* ==========================================================================
-   DASHBOARD
+   DASHBOARD Y GRÁFICO
    ========================================================================== */
 .main-card {
   background: var(--card-dark);
@@ -132,6 +148,10 @@ html, body, #root {
   margin: 0;
   font-size: 1.6rem;
   font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
 }
 
 .chart-info span {
@@ -153,86 +173,52 @@ html, body, #root {
   display: block;
   margin-bottom: 4px;
 }
+
 .stat p { 
   margin: 0; 
   font-weight: bold; 
   font-size: 0.9rem; 
 }
-.stat:nth-child(1) p { 
-  color: #ff4757; 
-}
-.stat:nth-child(2) p { 
-  color: #00d1b2; 
-}
-.stat:nth-child(3) p { 
-  color: #a29bfe; 
-}
+
+.stat:nth-child(1) p { color: var(--error); }
+.stat:nth-child(2) p { color: var(--success); }
+.stat:nth-child(3) p { color: #a29bfe; }
 
 /* ==========================================================================
-   INPUTS
+   BOTONES Y ESTADOS
    ========================================================================== */
-.input-section {
-  background: var(--card-dark);
-  padding: 20px;
-  border-radius: 25px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-input, .search-bar {
-  width: 100%;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #333;
+.btn-icon {
   background: #1a1a1a;
-  color: white;
-  box-sizing: border-box;
-}
-
-.quick-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-}
-
-.tag-btn {
-  padding: 7px 12px;
-  border-radius: 15px;
-  border: 1px solid #333;
-  background: #222;
-  color: white;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-.btn-group-direct {
-  display: flex;
-  gap: 10px;
-}
-
-.btn-direct {
-  flex: 1;
-  padding: 14px;
-  border-radius: 14px;
   border: none;
-  font-weight: bold;
+  padding: 8px;
+  border-radius: 10px;
+  font-size: 1.2rem;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
 }
 
-.btn-direct.in { background: var(--success); color: black; }
-.btn-direct.out { background: var(--error); color: white; }
+.border-mes {
+  border: 2px solid var(--accent) !important;
+  background: rgba(187, 134, 252, 0.1) !important;
+}
+
+.border-dia {
+  border: 2px solid var(--success) !important;
+  background: rgba(0, 209, 178, 0.1) !important;
+}
 
 /* ==========================================================================
-   HISTORIAL (FILAS PEQUEÑAS Y SEPARADAS)
+   HISTORIAL
    ========================================================================== */
 .history-item {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Empuja el monto a la derecha */
+  justify-content: space-between;
   background: var(--card-dark);
-  padding: 6px 14px; /* Fila súper delgada */
+  padding: 6px 14px;
   border-radius: 12px;
   margin-bottom: 6px;
 }
@@ -240,43 +226,26 @@ input, .search-bar {
 .item-info {
   flex: 1;
   display: flex;
-  flex-direction: row; /* Alineación horizontal */
-  align-items: center; /* Centrado vertical */
-  gap: 20px; /* AQUÍ AJUSTAS LA SEPARACIÓN: más espacio entre nombre y hora */
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
 }
 
 .item-info strong {
   font-size: 0.85rem;
-  min-width: 80px; /* Asegura que los nombres cortos no muevan la hora */
+  min-width: 80px;
 }
 
 .item-info span {
   font-size: 0.7rem;
   opacity: 0.5;
-  font-weight: normal;
 }
 
-.item-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.item-amount { font-size: 0.9rem; }
 .item-amount.ingreso { color: var(--success); font-weight: bold; }
 .item-amount.gasto { color: var(--error); font-weight: bold; }
 
-.delete-btn {
-  background: transparent;
-  border: none;
-  color: #444;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 0 0 0 5px;
-}
-
 /* ==========================================================================
-   MODALES Y ALERTAS
+   MODALES Y ANIMACIONES
    ========================================================================== */
 .toast-overlay {
   position: fixed;
@@ -287,145 +256,9 @@ input, .search-bar {
   align-items: center;
   z-index: 10000;
   background: rgba(0,0,0,0.6);
-  pointer-events: auto; /* Activado para modales */
 }
-
-.toast-box, .confirm-box {
-  background: #1e1e1e;
-  padding: 20px;
-  border-radius: 20px;
-  border: 1px solid #333;
-  text-align: center;
-  animation: toastPop 0.3s ease-out;
-}
-
-.confirm-btns {
-  display: flex;
-  gap: 10px;
-  margin-top: 15px;
-}
-
-.btn-cancel, .btn-confirm {
-  flex: 1;
-  padding: 10px;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.btn-cancel { background: #333; color: white; }
-.btn-confirm { background: var(--success); color: black; }
 
 @keyframes toastPop {
   from { opacity: 0; transform: scale(0.8); }
   to { opacity: 1; transform: scale(1); }
-}
-
-.loading-screen {
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: var(--accent);
-}
-/* Borde cuando estás en Vista Mensual (Color Morado) */
-.border-mes {
-  border: 2px solid #bb86fc !important;
-  background: rgba(187, 134, 252, 0.1) !important;
-  transition: all 0.3s ease;
-}
-
-/* Borde cuando estás en Vista Diaria (Color Verde) */
-.border-dia {
-  border: 2px solid #00d1b2 !important;
-  background: rgba(0, 209, 178, 0.1) !important;
-  transition: all 0.3s ease;
-}
-
-/* Ajuste para que el botón no se vea cuadrado */
-.btn-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-}
-.date-select-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: rgba(255, 255, 255, 0.08); /* Un fondo sutil para saber dónde tocar */
-  padding: 4px 8px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.mini-date-picker {
-  background: transparent;
-  border: none;
-  color: var(--accent); /* Tu color morado */
-  font-size: 0.9rem;
-  font-weight: bold;
-  cursor: pointer;
-  outline: none;
-  font-family: inherit;
-}
-
-/* Esto quita el icono feo que pone el navegador por defecto y deja el tuyo */
-.mini-date-picker::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  padding: 5px;
-  filter: invert(1); /* Lo hace blanco si es necesario */
-  opacity: 0; /* Lo ocultamos para que solo se vea tu emoji 📅 */
-  position: absolute;
-  right: 0;
-  width: 100%;
-}
-
-.calendar-mini-icon {
-  font-size: 1rem;
-  pointer-events: none; /* Hace que el clic pase a través del emoji al input */
-}
-
-.date-select-container {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.date-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  color: var(--accent);
-  opacity: 0.8;
-  font-weight: bold;
-  letter-spacing: 0.5px;
-}
-
-.date-select-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 6px 10px;
-  border-radius: 10px;
-  cursor: pointer;
-  width: fit-content; /* ESTO HACE QUE NO SEA LARGO */
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.mini-date-picker {
-  background: transparent;
-  border: none;
-  color: white;
-  font-size: 0.9rem;
-  font-weight: bold;
-  cursor: pointer;
-  outline: none;
-  width: 110px; /* Ancho fijo para que no se estire */
-}
-
-/* Para la vista de MES el input necesita un poco más de espacio */
-input[type="month"].mini-date-picker {
-  width: 130px;
 }
