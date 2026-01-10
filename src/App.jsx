@@ -20,8 +20,9 @@ import {
   setDoc,
 } from "firebase/firestore";
 
+// IMPORTACIÓN CORREGIDA PARA EL PDF
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 function App() {
   /* =======================
@@ -31,6 +32,7 @@ function App() {
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null); // Nuevo estado para el modal
 
   const [nombre, setNombre] = useState("");
   const [monto, setMonto] = useState("");
@@ -63,7 +65,6 @@ function App() {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
-        // Extraer nombre del correo (ej: jec) para el saludo
         const nickname = u.displayName || u.email.split('@')[0];
         showToast(`¡Bienvenido, ${nickname}! 👋`, "success");
 
@@ -159,11 +160,16 @@ function App() {
     }
   };
 
-  const handleLogout = async () => {
-    if (window.confirm("¿Estás seguro de que quieres salir?")) {
+  // Función para manejar cierres con confirmación personalizada
+  const triggerConfirm = (message, onConfirm) => {
+    setConfirmModal({ message, onConfirm });
+  };
+
+  const handleLogout = () => {
+    triggerConfirm("¿Estás seguro de que quieres salir?", async () => {
       await signOut(auth);
       showToast("Sesión cerrada", "info");
-    }
+    });
   };
 
   const registrar = async (tipo) => {
@@ -224,7 +230,8 @@ function App() {
           `S/ ${m.monto.toFixed(2)}`
         ]);
 
-        docPDF.autoTable({
+        // USO CORREGIDO DE AUTOTABLE
+        autoTable(docPDF, {
           startY: 30,
           head: [["Fecha", "Hora", "Detalle", "Tipo", "Monto"]],
           body: rows,
@@ -235,7 +242,7 @@ function App() {
         docPDF.save(`reporte_${fechaFiltro}.pdf`);
         showToast("PDF generado", "success");
     } catch (err) {
-        console.error(err);
+        console.error("Error detalle PDF:", err);
         showToast("Error al crear PDF", "error");
     }
   };
@@ -272,7 +279,6 @@ function App() {
           </div>
         </header>
 
-        {/* ... Resto del contenido del card y dashboard igual ... */}
         <div className="main-card donut-area">
           <div className="circle-chart-multi" style={{
               background: `conic-gradient(#ff4757 0deg ${stats.pGas}deg, #00d1b2 ${stats.pGas}deg ${stats.pGas + stats.pIng}deg, #a29bfe ${stats.pGas + stats.pIng}deg 360deg)`
@@ -314,14 +320,28 @@ function App() {
               <div className="item-info"><strong>{m.nombre}</strong><span>{m.hora}</span></div>
               <div className="item-right">
                 <span className={`item-amount ${m.tipo}`}>{m.tipo === 'gasto' ? '-' : '+'} S/ {m.monto.toFixed(2)}</span>
-                <button className="delete-btn" onClick={() => window.confirm("¿Eliminar?") && deleteDoc(doc(db, "movimientos", m.id))}>×</button>
+                <button className="delete-btn" onClick={() => triggerConfirm("¿Eliminar este movimiento?", () => deleteDoc(doc(db, "movimientos", m.id)))}>×</button>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* COMPONENTE DE ALERTA CENTRADA */}
+      {/* MODAL DE CONFIRMACIÓN PERSONALIZADO */}
+      {confirmModal && (
+        <div className="toast-overlay">
+          <div className="confirm-box">
+             <div className="confirm-icon">❓</div>
+             <p>{confirmModal.message}</p>
+             <div className="confirm-btns">
+                <button className="btn-cancel" onClick={() => setConfirmModal(null)}>Cancelar</button>
+                <button className="btn-confirm" onClick={() => { confirmModal.onConfirm(); setConfirmModal(null); }}>Aceptar</button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOASTS (Alertas de error/éxito) */}
       {toast && (
         <div className="toast-overlay">
           <div className={`toast-box ${toast.type}`}>

@@ -1,4 +1,6 @@
-/* ================== VARIABLES ================== */
+/* ==========================================================================
+   VARIABLES Y BASE
+   ========================================================================== */
 :root {
   --bg-dark: #000000;
   --card-dark: #121212;
@@ -8,7 +10,6 @@
   --text: #ffffff;
 }
 
-/* ================== BASE ================== */
 html, body, #root {
   margin: 0;
   padding: 0;
@@ -17,9 +18,12 @@ html, body, #root {
   background: var(--bg-dark);
   color: var(--text);
   font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
 }
 
-/* ================== LAYOUT ================== */
+/* ==========================================================================
+   LAYOUT
+   ========================================================================== */
 .main-container {
   min-height: 100vh;
   display: flex;
@@ -37,16 +41,13 @@ html, body, #root {
   background: var(--bg-dark);
 }
 
-/* ================== HEADER ================== */
+/* ==========================================================================
+   HEADER Y CONTROLES
+   ========================================================================== */
 .app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.header-left {
-  display: flex;
-  flex-direction: column;
 }
 
 .header-btns {
@@ -56,11 +57,12 @@ html, body, #root {
 }
 
 .mini-avatar {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   border: 2px solid var(--accent);
   cursor: pointer;
+  object-fit: cover;
 }
 
 .btn-icon {
@@ -68,626 +70,255 @@ html, body, #root {
   border: none;
   padding: 8px;
   border-radius: 10px;
-  color: white;
+  font-size: 1.2rem;
   cursor: pointer;
-}
-
-/* ================== CARD ================== */
-.main-card {
-  background: var(--card-dark);
-  padding: 25px 15px;
-  border-radius: 30px;
-  text-align: center;
-}
-
-/* ================== DONA ================== */
-.circle-chart-multi {
-  width: 210px;
-  height: 210px;
-  border-radius: 50%;
-  margin: 0 auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.inner-circle {
-  width: 170px;
-  height: 170px;
-  background: var(--card-dark);
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.chart-info p {
-  margin: 0;
-  font-size: 1.8rem;
-  font-weight: bold;
-}
-
-.chart-info span {
-  font-size: 0.75rem;
-  opacity: 0.6;
-}
-
-/* ================== STATS ================== */
-.dashboard-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  margin-top: 20px;
-  border-top: 1px solid #222;
-  padding-top: 15px;
-}
-
-.stat span {
-  font-size: 0.7rem;
-  opacity: 0.6;
-}
-
-.stat p {
-  margin: 0;
-  font-weight: bold;
-}
-
-.gasto-monto {
-  color: var(--error);
-}
-
-/* ================== INPUTS ================== */
-.input-section {
-  background: var(--card-dark);
-  padding: 20px;
-  border-radius: 25px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-input {
-  width: 100%;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #333;
-  background: #1a1a1a;
-  color: white;
-  box-sizing: border-box;
-}
-
-/* ================== TAGS ================== */
-.quick-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-}
-
-.tag-btn {
-  padding: 8px 14px;
-  border-radius: 18px;
-  border: 1px solid #333;
-  background: #222;
-  color: white;
-  cursor: pointer;
-}
-
-.tag-btn:active {
-  background: var(--accent);
-}
-
-/* ================== BOTONES ================== */
-.btn-group-direct {
-  display: flex;
-  gap: 10px;
-}
-
-.btn-direct {
-  flex: 1;
-  padding: 14px;
-  border-radius: 14px;
-  border: none;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.btn-direct.in {
-  background: var(--success);
-  color: black;
-}
-
-.btn-direct.out {
-  background: var(--error);
-  color: white;
-}
-
-/* ================== HISTORIAL ================== */
-.search-bar {
-  margin-bottom: 10px;
-  border-radius: 20px;
-}
-
-.history-item {
-  display: flex;
-  align-items: center;
-  background: var(--card-dark);
-  padding: 14px;
-  border-radius: 18px;
-  margin-bottom: 8px;
-}
-
-.item-info {
-  flex: 1;
-}
-
-.item-info strong {
-  display: block;
-}
-
-.item-info span {
-  font-size: 0.75rem;
-  opacity: 0.5;
-}
-
-.item-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.item-amount.ingreso {
-  color: var(--success);
-  font-weight: bold;
-}
-
-.item-amount.gasto {
-  color: var(--error);
-  font-weight: bold;
-}
-
-.delete-btn {
-  background: transparent;
-  border: none;
-  color: #555;
-  font-size: 1.4rem;
-  cursor: pointer;
-}
-
-/* ================== TOAST ================== */
-.toast {
-  position: fixed;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1a1a1a;
-  padding: 12px 20px;
-  border-radius: 14px;
-  font-weight: bold;
-  z-index: 9999;
-}
-
-.toast.success { color: var(--success); }
-.toast.error { color: var(--error); }
-.toast.info { color: var(--accent); }
-
-/* ================== LOADING ================== */
-.loading-screen {
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: var(--accent);
-  font-size: 1.4rem;
-}
-/* ================== VARIABLES ================== */
-:root {
-  --bg-dark: #000000;
-  --card-dark: #121212;
-  --accent: #bb86fc;
-  --success: #00d1b2;
-  --error: #ff4757;
-  --text: #ffffff;
-}
-
-/* ================== BASE ================== */
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  min-height: 100vh;
-  background: var(--bg-dark);
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-}
-
-/* ================== LAYOUT ================== */
-.main-container {
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-}
-
-.phone-screen {
-  width: 100%;
-  max-width: 380px;
-  min-height: 100vh;
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  background: var(--bg-dark);
-}
-
-/* ================== HEADER ================== */
-.app-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-left {
-  display: flex;
-  flex-direction: column;
-}
-
-.header-btns {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.mini-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 2px solid var(--accent);
-  cursor: pointer;
-}
-
-.btn-icon {
-  background: #1a1a1a;
-  border: none;
-  padding: 8px;
-  border-radius: 10px;
-  color: white;
-  cursor: pointer;
-}
-
-/* ================== CARD ================== */
-.main-card {
-  background: var(--card-dark);
-  padding: 25px 15px;
-  border-radius: 30px;
-  text-align: center;
-}
-
-/* ================== DONA ================== */
-.circle-chart-multi {
-  width: 210px;
-  height: 210px;
-  border-radius: 50%;
-  margin: 0 auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.inner-circle {
-  width: 170px;
-  height: 170px;
-  background: var(--card-dark);
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.chart-info p {
-  margin: 0;
-  font-size: 1.8rem;
-  font-weight: bold;
-}
-
-.chart-info span {
-  font-size: 0.75rem;
-  opacity: 0.6;
-}
-
-/* ================== STATS ================== */
-.dashboard-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  margin-top: 20px;
-  border-top: 1px solid #222;
-  padding-top: 15px;
-}
-
-.stat span {
-  font-size: 0.7rem;
-  opacity: 0.6;
-}
-
-.stat p {
-  margin: 0;
-  font-weight: bold;
-}
-
-.gasto-monto {
-  color: var(--error);
-}
-
-/* ================== INPUTS ================== */
-.input-section {
-  background: var(--card-dark);
-  padding: 20px;
-  border-radius: 25px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-input {
-  width: 100%;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #333;
-  background: #1a1a1a;
-  color: white;
-  box-sizing: border-box;
-}
-
-/* ================== TAGS ================== */
-.quick-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-}
-
-.tag-btn {
-  padding: 8px 14px;
-  border-radius: 18px;
-  border: 1px solid #333;
-  background: #222;
-  color: white;
-  cursor: pointer;
-}
-
-.tag-btn:active {
-  background: var(--accent);
-}
-
-/* ================== BOTONES ================== */
-.btn-group-direct {
-  display: flex;
-  gap: 10px;
-}
-
-.btn-direct {
-  flex: 1;
-  padding: 14px;
-  border-radius: 14px;
-  border: none;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.btn-direct.in {
-  background: var(--success);
-  color: black;
-}
-
-.btn-direct.out {
-  background: var(--error);
-  color: white;
-}
-
-/* ================== HISTORIAL ================== */
-.search-bar {
-  margin-bottom: 10px;
-  border-radius: 20px;
-}
-
-.history-item {
-  display: flex;
-  align-items: center;
-  background: var(--card-dark);
-  padding: 14px;
-  border-radius: 18px;
-  margin-bottom: 8px;
-}
-
-.item-info {
-  flex: 1;
-}
-
-.item-info strong {
-  display: block;
-}
-
-.item-info span {
-  font-size: 0.75rem;
-  opacity: 0.5;
-}
-
-.item-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.item-amount.ingreso {
-  color: var(--success);
-  font-weight: bold;
-}
-
-.item-amount.gasto {
-  color: var(--error);
-  font-weight: bold;
-}
-
-.delete-btn {
-  background: transparent;
-  border: none;
-  color: #555;
-  font-size: 1.4rem;
-  cursor: pointer;
-}
-
-/* ================== TOAST ================== */
-.toast {
-  position: fixed;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1a1a1a;
-  padding: 12px 20px;
-  border-radius: 14px;
-  font-weight: bold;
-  z-index: 9999;
-}
-
-.toast.success { color: var(--success); }
-.toast.error { color: var(--error); }
-.toast.info { color: var(--accent); }
-
-/* ================== LOADING ================== */
-.loading-screen {
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: var(--accent);
-  font-size: 1.4rem;
-}
-/* Añade esto a tu archivo App.css */
-
-.edit-hint {
-  font-size: 0.65rem;
-  text-align: center;
-  opacity: 0.5;
-  margin-bottom: -5px;
-  display: block;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  transition: transform 0.2s;
 }
 
 .mini-date-picker {
-    background: transparent;
-    border: none;
-    color: var(--accent);
-    font-size: 0.9rem;
-    padding: 0;
-    width: auto;
-    cursor: pointer;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
 }
 
-/* Mejora para los botones favoritos al pulsar */
-.tag-btn:active {
-    transform: scale(0.95);
-    background: var(--accent);
-    color: black;
-}
-.confirm-overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.8);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 1000;
-}
-.confirm-card {
-  background: #1a1a1a;
-  padding: 20px;
-  border-radius: 15px;
+/* ==========================================================================
+   DASHBOARD (DONA Y STATS)
+   ========================================================================== */
+.main-card {
+  background: var(--card-dark);
+  padding: 25px 15px;
+  border-radius: 30px;
   text-align: center;
-  border: 1px solid #333;
 }
-.confirm-btns {
-  display: flex; gap: 10px; margin-top: 15px; justify-content: center;
-}
-.confirm-btns button {
-  padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer;
-}
-.btn-yes { background: #ff4757; color: white; }
-/* Notificación Toast en el Centro */
-.toast-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+
+.circle-chart-multi {
+  width: 210px;
+  height: 210px;
+  border-radius: 50%;
+  margin: 0 auto;
   display: flex;
   justify-content: center;
   align-items: center;
-  pointer-events: none; /* No bloquea clics */
-  z-index: 9999;
 }
 
-.toast-card {
-  background: #2d3436;
-  color: white;
-  padding: 16px 24px;
-  border-radius: 12px;
+.inner-circle {
+  width: 170px;
+  height: 170px;
+  background: var(--card-dark);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.chart-info p {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+.chart-info span {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 20px;
+  border-top: 1px solid #222;
+  padding-top: 15px;
+}
+
+.stat p {
+  margin: 5px 0 0 0;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.gasto-monto { color: var(--error); }
+
+/* ==========================================================================
+   SECCIÓN DE ENTRADA (INPUTS Y TAGS)
+   ========================================================================== */
+.input-section {
+  background: var(--card-dark);
+  padding: 20px;
+  border-radius: 25px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: 12px;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: white;
+  box-sizing: border-box;
+}
+
+.quick-tags {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  min-width: 180px;
-  text-align: center;
+  justify-content: center;
 }
 
-.toast-card.success { border-bottom: 4px solid #00d1b2; }
-.toast-card.error { border-bottom: 4px solid #ff4757; }
-.toast-card.info { border-bottom: 4px solid #a29bfe; }
-
-.toast-icon { font-size: 24px; }
-.toast-msg { font-weight: 600; font-size: 14px; }
-
-@keyframes popIn {
-  from { opacity: 0; transform: scale(0.8); }
-  to { opacity: 1; transform: scale(1); }
+.tag-btn {
+  padding: 8px 14px;
+  border-radius: 18px;
+  border: 1px solid #333;
+  background: #222;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-/* Overlay para centrar la alerta */
+
+.tag-btn:active {
+  transform: scale(0.9);
+  background: var(--accent);
+}
+
+.btn-group-direct {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-direct {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-direct.in { background: var(--success); color: black; }
+.btn-direct.out { background: var(--error); color: white; }
+
+/* ==========================================================================
+   HISTORIAL
+   ========================================================================== */
+.history-item {
+  display: flex;
+  align-items: center;
+  background: var(--card-dark);
+  padding: 14px;
+  border-radius: 18px;
+  margin-bottom: 8px;
+}
+
+.item-info { flex: 1; }
+.item-info span { font-size: 0.75rem; opacity: 0.5; }
+
+.item-amount.ingreso { color: var(--success); font-weight: bold; }
+.item-amount.gasto { color: var(--error); font-weight: bold; }
+
+.delete-btn {
+  background: transparent;
+  border: none;
+  color: #555;
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding-left: 10px;
+}
+
+/* ==========================================================================
+   MODALES Y ALERTAS (CENTRADO PROFESIONAL)
+   ========================================================================== */
 .toast-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10000;
-  pointer-events: none; /* No estorba clics */
+  pointer-events: none;
+  background: rgba(0,0,0,0.4); /* Oscurece un poco el fondo */
 }
 
+/* Caja de alerta (Error, éxito, info) */
 .toast-box {
-  background: rgba(30, 30, 30, 0.95);
-  backdrop-filter: blur(8px);
+  pointer-events: auto;
+  background: rgba(30, 30, 30, 0.98);
+  backdrop-filter: blur(10px);
   color: white;
   padding: 20px 30px;
-  border-radius: 20px;
+  border-radius: 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
   animation: toastPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  min-width: 200px;
+  min-width: 220px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.toast-box.success { border-bottom: 4px solid #00d1b2; }
-.toast-box.error { border-bottom: 4px solid #ff4757; }
-.toast-box.info { border-bottom: 4px solid #a29bfe; }
+.toast-box.success { border-bottom: 4px solid var(--success); }
+.toast-box.error { border-bottom: 4px solid var(--error); }
+.toast-box.info { border-bottom: 4px solid var(--accent); }
 
-.toast-icon { font-size: 32px; }
-.toast-text { font-weight: 600; font-size: 16px; text-align: center; }
+/* Caja de Confirmación (Si/No) */
+.confirm-box {
+  pointer-events: auto;
+  background: #1e1e1e;
+  padding: 25px;
+  border-radius: 24px;
+  text-align: center;
+  border: 1px solid #333;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+  animation: toastPop 0.3s ease-out;
+  min-width: 280px;
+}
 
+.confirm-btns {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.btn-cancel {
+  flex: 1;
+  background: #333;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.btn-confirm {
+  flex: 1;
+  background: var(--success);
+  color: black;
+  border: none;
+  padding: 12px;
+  border-radius: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   ANIMACIONES Y OTROS
+   ========================================================================== */
 @keyframes toastPop {
-  from { opacity: 0; transform: scale(0.5) translateY(20px); }
+  from { opacity: 0; transform: scale(0.7) translateY(30px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.loading-screen {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--accent);
+  font-weight: bold;
 }
