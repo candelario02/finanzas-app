@@ -49,7 +49,7 @@ function App() {
   );
 
   /* =======================
-      TOAST (MEJORADO)
+      TOAST PROFESIONAL
   ======================= */
   const showToast = (msg, type = "info") => {
     setToast({ msg, type });
@@ -57,12 +57,16 @@ function App() {
   };
 
   /* =======================
-      AUTH & PREFERENCIAS (SIN CAMBIOS)
+      AUTH & PREFERENCIAS
   ======================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
+        // Extraer nombre del correo (ej: jec) para el saludo
+        const nickname = u.displayName || u.email.split('@')[0];
+        showToast(`¡Bienvenido, ${nickname}! 👋`, "success");
+
         try {
           const ref = doc(db, "config_usuarios", u.uid);
           const snap = await getDoc(ref);
@@ -83,7 +87,7 @@ function App() {
   }, []);
 
   /* =======================
-      DATA REALTIME (SIN CAMBIOS)
+      DATA REALTIME
   ======================= */
   useEffect(() => {
     if (!user) return;
@@ -144,8 +148,24 @@ function App() {
   }, [movimientos, vistaMensual, fechaFiltro, busqueda]);
 
   /* =======================
-      ACCIONES (LÓGICA ORIGINAL)
+      ACCIONES
   ======================= */
+  const handleLogin = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (err) {
+      console.error(err);
+      showToast("Error al iniciar sesión", "error");
+    }
+  };
+
+  const handleLogout = async () => {
+    if (window.confirm("¿Estás seguro de que quieres salir?")) {
+      await signOut(auth);
+      showToast("Sesión cerrada", "info");
+    }
+  };
+
   const registrar = async (tipo) => {
     if (!nombre || !monto || !user) {
         showToast("Completa los campos", "error");
@@ -168,26 +188,18 @@ function App() {
 
       setNombre("");
       setMonto("");
-      showToast("¡Movimiento registrado!", "success");
+      showToast("¡Movimiento guardado!", "success");
     } catch (err) {
       console.error(err);
-      showToast("Error al guardar en la nube", "error");
-    }
-  };
-
-  const handleLogout = async () => {
-    if (window.confirm("¿Cerrar sesión?")) {
-      await signOut(auth);
+      showToast("Error al guardar", "error");
     }
   };
 
   const editarTags = async () => {
-    const nuevos = prompt("Editar favoritos (separados por coma):", tags.join(", "));
+    const nuevos = prompt("Edita tus palabras favoritas:", tags.join(", "));
     if (nuevos === null) return;
-
     const lista = nuevos.split(",").map((t) => t.trim()).filter(t => t !== "");
     setTags(lista);
-    
     if (user) {
         try {
             await setDoc(doc(db, "config_usuarios", user.uid), { tags: lista });
@@ -198,50 +210,32 @@ function App() {
     }
   };
 
-  /* =======================
-      EXPORTAR PDF (CORREGIDO)
-  ======================= */
   const exportarPDF = () => {
-    if (stats.filtrados.length === 0) {
-      showToast("No hay datos para exportar", "info");
-      return;
-    }
-
     try {
         const docPDF = new jsPDF();
+        docPDF.setFontSize(18);
+        docPDF.text("Reporte de Finanzas", 14, 20);
         
-        // Encabezado
-        docPDF.setFontSize(20);
-        docPDF.setTextColor(40);
-        docPDF.text("Reporte de Movimientos", 14, 22);
-        
-        docPDF.setFontSize(10);
-        docPDF.setTextColor(100);
-        docPDF.text(`Usuario: ${user?.displayName || user?.email}`, 14, 30);
-        docPDF.text(`Periodo: ${fechaFiltro}`, 14, 35);
-        docPDF.text(`Generado: ${new Date().toLocaleString()}`, 14, 40);
-
-        const tableColumn = ["Fecha", "Hora", "Detalle", "Tipo", "Monto"];
-        const tableRows = stats.filtrados.map(m => [
+        const rows = stats.filtrados.map((m) => [
           m.fecha,
           m.hora || "--:--",
           m.nombre,
           m.tipo.toUpperCase(),
-          `S/ ${Number(m.monto).toFixed(2)}`
+          `S/ ${m.monto.toFixed(2)}`
         ]);
 
         docPDF.autoTable({
-          startY: 45,
-          head: [tableColumn],
-          body: tableRows,
-          theme: 'striped',
+          startY: 30,
+          head: [["Fecha", "Hora", "Detalle", "Tipo", "Monto"]],
+          body: rows,
+          theme: 'grid',
           headStyles: { fillColor: [0, 209, 178] }
         });
 
-        docPDF.save(`Reporte_Finanzas_${fechaFiltro}.pdf`);
-        showToast("PDF generado con éxito", "success");
+        docPDF.save(`reporte_${fechaFiltro}.pdf`);
+        showToast("PDF generado", "success");
     } catch (err) {
-        console.error("Error detallado PDF:", err);
+        console.error(err);
         showToast("Error al crear PDF", "error");
     }
   };
@@ -264,9 +258,10 @@ function App() {
               onChange={(e) => setFechaFiltro(e.target.value)}
             />
           </div>
+
           <div className="header-btns">
             {!user ? (
-              <button onClick={() => signInWithPopup(auth, googleProvider)}>Login</button>
+              <button className="btn-google-mini" onClick={handleLogin}>Login</button>
             ) : (
               <img src={user.photoURL} alt="u" className="mini-avatar" onClick={handleLogout} />
             )}
@@ -277,7 +272,7 @@ function App() {
           </div>
         </header>
 
-        {/* ... Resto de tu UI igual ... */}
+        {/* ... Resto del contenido del card y dashboard igual ... */}
         <div className="main-card donut-area">
           <div className="circle-chart-multi" style={{
               background: `conic-gradient(#ff4757 0deg ${stats.pGas}deg, #00d1b2 ${stats.pGas}deg ${stats.pGas + stats.pIng}deg, #a29bfe ${stats.pGas + stats.pIng}deg 360deg)`
@@ -326,14 +321,14 @@ function App() {
         </div>
       </div>
 
-      {/* TOAST PROFESIONAL EN EL CENTRO */}
+      {/* COMPONENTE DE ALERTA CENTRADA */}
       {toast && (
         <div className="toast-overlay">
-          <div className={`toast-card ${toast.type}`}>
+          <div className={`toast-box ${toast.type}`}>
             <div className="toast-icon">
               {toast.type === "success" ? "✅" : toast.type === "error" ? "❌" : "ℹ️"}
             </div>
-            <div className="toast-msg">{toast.msg}</div>
+            <div className="toast-text">{toast.msg}</div>
           </div>
         </div>
       )}

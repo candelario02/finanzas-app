@@ -650,3 +650,44 @@ input {
   from { opacity: 0; transform: scale(0.8); }
   to { opacity: 1; transform: scale(1); }
 }
+/* Overlay para centrar la alerta */
+.toast-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  pointer-events: none; /* No estorba clics */
+}
+
+.toast-box {
+  background: rgba(30, 30, 30, 0.95);
+  backdrop-filter: blur(8px);
+  color: white;
+  padding: 20px 30px;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+  animation: toastPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  min-width: 200px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.toast-box.success { border-bottom: 4px solid #00d1b2; }
+.toast-box.error { border-bottom: 4px solid #ff4757; }
+.toast-box.info { border-bottom: 4px solid #a29bfe; }
+
+.toast-icon { font-size: 32px; }
+.toast-text { font-weight: 600; font-size: 16px; text-align: center; }
+
+@keyframes toastPop {
+  from { opacity: 0; transform: scale(0.5) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
