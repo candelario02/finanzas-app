@@ -21,7 +21,7 @@ function App() {
   const [tags, setTags] = useState(["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"]);
   const [busqueda, setBusqueda] = useState('');
   const [vistaMensual, setVistaMensual] = useState(false);
-  const [fechaFiltro] = useState(new Date().toISOString().split('T')[0]);
+  const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     const init = async () => {
@@ -103,11 +103,11 @@ function App() {
         <header className="app-header">
           <div className="header-left">
             <h2>Finanzas</h2>
-            <span className="date-display">{vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro}</span>
+            <input className="mini-date-picker" type={vistaMensual ? "month" : "date"} value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro} onChange={e => setFechaFiltro(e.target.value)} />
           </div>
           <div className="header-btns">
             {!user ? (
-              <button onClick={() => signInWithPopup(auth, googleProvider)}>Login</button>
+              <button className="btn-google-login-oficial" onClick={() => signInWithPopup(auth, googleProvider)}>Login</button>
             ) : (
               <img src={user.photoURL} alt="u" className="mini-avatar" onClick={() => signOut(auth)} />
             )}
@@ -116,15 +116,17 @@ function App() {
           </div>
         </header>
 
-        <div className="main-card">
+        <div className="main-card donut-area">
           <div className="circle-chart-multi" style={{ background: `conic-gradient(#ff4757 0 ${stats.pG}deg, #00d1b2 ${stats.pG}deg ${stats.pG + stats.pI}deg, #a29bfe ${stats.pG + stats.pI}deg 360deg)` }}>
             <div className="inner-circle">
-              <p>S/ {stats.bal.toFixed(2)}</p>
-              <span>{vistaMensual ? "Mensual" : "Diario"}</span>
+              <div className="chart-info">
+                <p>S/ {stats.bal.toFixed(2)}</p>
+                <span>{vistaMensual ? "Balance Mensual" : "Balance Diario"}</span>
+              </div>
             </div>
           </div>
           <div className="dashboard-stats">
-            <div className="stat"><span>Gastos</span><p>S/ {stats.g.toFixed(2)}</p></div>
+            <div className="stat"><span className="gasto-label">Gastos</span><p className="gasto-monto">S/ {stats.g.toFixed(2)}</p></div>
             <div className="stat"><span>Ingresos</span><p>S/ {stats.i.toFixed(2)}</p></div>
             <div className="stat"><span>Ahorro</span><p style={{color:'#a29bfe'}}>S/ {stats.aho.toFixed(2)}</p></div>
           </div>
@@ -133,7 +135,7 @@ function App() {
         <div className="input-section">
           <div className="quick-tags">
             {tags.map((t, idx) => <button key={idx} onClick={() => setNombre(t)} className="tag-btn">{t}</button>)}
-            <button className="tag-btn-edit" onClick={editarTags}>⚙️</button>
+            <button className="tag-btn" onClick={editarTags}>⚙️</button>
           </div>
           <input placeholder="Detalle" value={nombre} onChange={e => setNombre(e.target.value)} />
           <input type="number" placeholder="Monto S/" value={monto} onChange={e => setMonto(e.target.value)} />
@@ -149,7 +151,7 @@ function App() {
             <div key={m.id} className="history-item">
               <div className="item-info"><strong>{m.nombre}</strong><span>{m.hora}</span></div>
               <div className="item-right">
-                <span className={m.tipo}>S/ {m.monto.toFixed(2)}</span>
+                <span className={`item-amount ${m.tipo}`}>S/ {m.monto.toFixed(2)}</span>
                 <button className="delete-btn" onClick={() => deleteDoc(doc(db, "movimientos", m.id))}>&times;</button>
               </div>
             </div>
