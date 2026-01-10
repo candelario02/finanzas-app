@@ -24,26 +24,23 @@ function App() {
   const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
-    const inicializar = async () => {
+    const init = async () => {
       try {
         await setPersistence(auth, browserLocalPersistence);
         onAuthStateChanged(auth, async (u) => {
           if (u) {
             setUser(u);
-            const ref = doc(db, "config_usuarios", u.uid);
-            const snap = await getDoc(ref);
-            if (snap.exists()) setTags(snap.data().tags);
+            const s = await getDoc(doc(db, "config_usuarios", u.uid));
+            if (s.exists()) setTags(s.data().tags);
           } else {
             setUser(null);
+            setMovimientos([]);
           }
           setLoading(false);
         });
-      } catch (error) { 
-        console.error(error);
-        setLoading(false); 
-      }
+      } catch (e) { console.error(e); setLoading(false); }
     };
-    inicializar();
+    init();
   }, []);
 
   useEffect(() => {
@@ -57,50 +54,45 @@ function App() {
   }, [user]);
 
   const stats = useMemo(() => {
-    const filtrados = movimientos.filter(m => {
-      const matchFecha = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
-      const matchBusq = m.nombre.toLowerCase().includes(busqueda.toLowerCase());
-      return matchFecha && matchBusq;
+    const f = movimientos.filter(m => {
+      const mF = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
+      return mF && m.nombre.toLowerCase().includes(busqueda.toLowerCase());
     });
-    const ing = filtrados.filter(m => m.tipo === 'ingreso').reduce((a, b) => a + b.monto, 0);
-    const gas = filtrados.filter(m => m.tipo === 'gasto').reduce((a, b) => a + b.monto, 0);
-    const bal = ing - gas;
+    const i = f.filter(m => m.tipo === 'ingreso').reduce((a, b) => a + b.monto, 0);
+    const g = f.filter(m => m.tipo === 'gasto').reduce((a, b) => a + b.monto, 0);
+    const bal = i - g;
     const aho = bal > 0 ? bal : 0;
-    const total = ing + gas + aho;
-    return { 
-      filtrados, ing, gas, bal, aho, 
-      pG: total > 0 ? (gas/total)*360 : 0, 
-      pI: total > 0 ? (ing/total)*360 : 0 
-    };
+    const t = i + g + aho;
+    return { f, i, g, bal, aho, pG: t > 0 ? (g/t)*360 : 0, pI: t > 0 ? (i/t)*360 : 0 };
   }, [movimientos, vistaMensual, fechaFiltro, busqueda]);
 
   const registrar = async (tipo) => {
     if (!nombre || !monto || !user) return;
-    const nuevo = {
+    const n = {
       uid: user.uid, nombre: nombre.trim(), monto: parseFloat(monto), tipo,
       fecha: new Date().toISOString().split('T')[0],
       hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       createdAt: Date.now()
     };
     setNombre(''); setMonto('');
-    try { await addDoc(collection(db, "movimientos"), nuevo); } catch (e) { console.error(e); }
+    try { await addDoc(collection(db, "movimientos"), n); } catch (e) { console.error(e); }
   };
 
   const editarTags = async () => {
-    const val = prompt("Categorías separadas por coma:", tags.join(", "));
-    if (val && user) {
-      const nTags = val.split(",").map(t => t.trim());
-      setTags(nTags);
-      await setDoc(doc(db, "config_usuarios", user.uid), { tags: nTags });
+    const v = prompt("Categorías (comas):", tags.join(", "));
+    if (v && user) {
+      const nt = v.split(",").map(t => t.trim());
+      setTags(nt);
+      await setDoc(doc(db, "config_usuarios", user.uid), { tags: nt });
     }
   };
 
-  const generarPDF = () => {
-    const docPDF = new jsPDF();
-    docPDF.text("Reporte de Finanzas", 14, 20);
-    const filas = stats.filtrados.map(m => [m.fecha, m.nombre, m.tipo, m.monto.toFixed(2)]);
-    docPDF.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto S/']], body: filas, startY: 30 });
-    docPDF.save("finanzas.pdf");
+  const exportarPDF = () => {
+    const dP = new jsPDF();
+    dP.text("Reporte Finanzas", 14, 20);
+    const filas = stats.f.map(m => [m.fecha, m.nombre, m.tipo, `S/ ${m.monto.toFixed(2)}`]);
+    dP.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: filas, startY: 30 });
+    dP.save("finanzas.pdf");
   };
 
   if (loading) return <div className="loading-screen">Cargando datos...</div>;
@@ -117,49 +109,44 @@ function App() {
             {!user ? (
               <button onClick={() => signInWithPopup(auth, googleProvider)}>Login</button>
             ) : (
-              <img src={user.photoURL} alt="" className="mini-avatar" onClick={() => signOut(auth)} />
+              <img src={user.photoURL} alt="u" className="mini-avatar" onClick={() => signOut(auth)} />
             )}
-            <button className="btn-icon" onClick={generarPDF}>📄</button>
+            <button className="btn-icon" onClick={exportarPDF}>📄</button>
             <button className="btn-icon" onClick={() => setVistaMensual(!vistaMensual)}>{vistaMensual ? "📅" : "🗓️"}</button>
           </div>
         </header>
-
         <div className="main-card">
           <div className="circle-chart-multi" style={{ background: `conic-gradient(#ff4757 0 ${stats.pG}deg, #00d1b2 ${stats.pG}deg ${stats.pG + stats.pI}deg, #a29bfe ${stats.pG + stats.pI}deg 360deg)` }}>
             <div className="inner-circle">
-              <div className="chart-info">
-                <p>S/ {stats.bal.toFixed(2)}</p>
-                <span>{vistaMensual ? "Balance Mensual" : "Balance Diario"}</span>
-              </div>
+              <p>S/ {stats.bal.toFixed(2)}</p>
+              <span>{vistaMensual ? "Mensual" : "Diario"}</span>
             </div>
           </div>
           <div className="dashboard-stats">
-            <div className="stat"><span>Gastos</span><p>S/ {stats.gas.toFixed(2)}</p></div>
-            <div className="stat"><span>Ingresos</span><p>S/ {stats.ing.toFixed(2)}</p></div>
-            <div className="stat"><span>Ahorro</span><p>S/ {stats.aho.toFixed(2)}</p></div>
+            <div className="stat"><span>Gastos</span><p>S/ {stats.g.toFixed(2)}</p></div>
+            <div className="stat"><span>Ingresos</span><p>S/ {stats.i.toFixed(2)}</p></div>
+            <div className="stat"><span>Ahorro</span><p style={{color:'#a29bfe'}}>S/ {stats.aho.toFixed(2)}</p></div>
           </div>
         </div>
-
         <div className="input-section">
           <div className="quick-tags">
-            {tags.map((t, i) => <button key={i} onClick={() => setNombre(t)} className="tag-btn">{t}</button>)}
+            {tags.map((t, idx) => <button key={idx} onClick={() => setNombre(t)} className="tag-btn">{t}</button>)}
             <button className="tag-btn-edit" onClick={editarTags}>⚙️</button>
           </div>
           <input placeholder="Detalle" value={nombre} onChange={e => setNombre(e.target.value)} />
-          <input type="number" placeholder="Monto S/" value={monto} onChange={e => setNombre(e.target.value)} />
+          <input type="number" placeholder="Monto S/" value={monto} onChange={e => setMonto(e.target.value)} />
           <div className="btn-group-direct">
             <button onClick={() => registrar('ingreso')} className="btn-direct in">💰 Ingreso</button>
             <button onClick={() => registrar('gasto')} className="btn-direct out">💸 Gasto</button>
           </div>
         </div>
-
         <div className="history-list">
           <input className="search-bar" placeholder="🔍 Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
-          {stats.filtrados.map(m => (
+          {stats.f.map(m => (
             <div key={m.id} className="history-item">
               <div className="item-info"><strong>{m.nombre}</strong><span>{m.hora}</span></div>
               <div className="item-right">
-                <span className={`item-amount ${m.tipo}`}>S/ {m.monto.toFixed(2)}</span>
+                <span className={m.tipo}>S/ {m.monto.toFixed(2)}</span>
                 <button className="delete-btn" onClick={() => deleteDoc(doc(db, "movimientos", m.id))}>&times;</button>
               </div>
             </div>
