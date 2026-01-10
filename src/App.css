@@ -213,26 +213,30 @@ input, .search-bar {
 .history-item {
   display: flex;
   align-items: center;
+  justify-content: space-between; /* Empuja el monto a la derecha */
   background: var(--card-dark);
-  padding: 8px 14px; /* RECORTE: De 14px a 8px para fila más delgada */
-  border-radius: 15px;
+  padding: 6px 14px; /* Fila súper delgada */
+  border-radius: 12px;
   margin-bottom: 6px;
 }
 
 .item-info {
   flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: 4px; /* SEPARACIÓN: Espacio entre nombre y hora */
+  flex-direction: row; /* Alineación horizontal */
+  align-items: center; /* Centrado vertical */
+  gap: 20px; /* AQUÍ AJUSTAS LA SEPARACIÓN: más espacio entre nombre y hora */
 }
 
 .item-info strong {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  min-width: 80px; /* Asegura que los nombres cortos no muevan la hora */
 }
 
 .item-info span {
-  font-size: 0.68rem; /* Un poco más pequeña para contraste */
-  opacity: 0.4;
+  font-size: 0.7rem;
+  opacity: 0.5;
+  font-weight: normal;
 }
 
 .item-right {
