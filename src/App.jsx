@@ -1,8 +1,24 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './App.css';
 import { db, auth, googleProvider } from './firebase';
-import { signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
+import { 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged, 
+  setPersistence, 
+  browserLocalPersistence 
+} from 'firebase/auth';
+import { 
+  collection, 
+  addDoc, 
+  query, 
+  where, 
+  onSnapshot, 
+  deleteDoc, 
+  doc,
+  getDoc,
+  setDoc
+} from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -15,77 +31,117 @@ function App() {
   const [tags, setTags] = useState(["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"]);
   const [busqueda, setBusqueda] = useState('');
   const [vistaMensual, setVistaMensual] = useState(false);
-  const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
+  const [fechaFiltro, setFechaFiltro] = useState(new Date().toLocaleDateString('en-CA'));
 
+  // 1. CARGA DE USUARIO CON TIMEOUT DE SEGURIDAD
   useEffect(() => {
-    const init = async () => {
+    // Si en 4 segundos no hay respuesta de Firebase, forzamos el cierre del loading
+    const timer = setTimeout(() => setLoading(false), 4000);
+
+    const configurarAuth = async () => {
       try {
         await setPersistence(auth, browserLocalPersistence);
         onAuthStateChanged(auth, async (u) => {
           if (u) {
             setUser(u);
-            const s = await getDoc(doc(db, "config_usuarios", u.uid));
-            if (s.exists()) setTags(s.data().tags);
+            const docRef = doc(db, "config_usuarios", u.uid);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) setTags(docSnap.data().tags);
           } else {
             setUser(null);
           }
           setLoading(false);
+          clearTimeout(timer);
         });
-      } catch (e) { setLoading(false); }
+      } catch (error) {
+        console.error("Error Auth:", error);
+        setLoading(false);
+      }
     };
-    init();
+    configurarAuth();
+    return () => clearTimeout(timer);
   }, []);
 
+  // 2. ESCUCHA DE DATOS (CORREGIDO)
   useEffect(() => {
+    // Si no hay usuario, no intentamos escuchar Firestore
     if (!user) return;
+
     const q = query(collection(db, "movimientos"), where("uid", "==", user.uid));
+    
     const unsub = onSnapshot(q, (snap) => {
       const items = snap.docs.map(d => ({ ...d.data(), id: d.id }));
       setMovimientos(items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
+    }, (error) => {
+      console.error("Error en Firestore:", error);
     });
-    return () => unsub();
-  }, [user]);
 
+    return () => unsub();
+  }, [user]); // Solo se ejecuta cuando el usuario cambia
+
+  // 3. LÓGICA DE BALANCE
   const stats = useMemo(() => {
     const filtrados = movimientos.filter(m => {
-      const coincideFecha = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
-      const coincideBusqueda = m.nombre.toLowerCase().includes(busqueda.toLowerCase());
-      return coincideFecha && coincideBusqueda;
+      if (!m.fecha) return false;
+      const matchFecha = vistaMensual 
+        ? m.fecha.substring(0, 7) === fechaFiltro.substring(0, 7)
+        : m.fecha === fechaFiltro;
+      const matchBusqueda = m.nombre.toLowerCase().includes(busqueda.toLowerCase());
+      return matchFecha && matchBusqueda;
     });
+
     const ing = filtrados.filter(m => m.tipo === 'ingreso').reduce((a, b) => a + b.monto, 0);
     const gas = filtrados.filter(m => m.tipo === 'gasto').reduce((a, b) => a + b.monto, 0);
     const bal = ing - gas;
-    const total = ing + gas + (bal > 0 ? bal : 0);
-    return { 
-      filtrados, ing, gas, bal,
-      pG: total > 0 ? (gas / total) * 360 : 0,
-      pI: total > 0 ? (ing / total) * 360 : 0 
-    };
+    const aho = bal > 0 ? bal : 0;
+    
+    const totalCirculo = ing + gas + (bal > 0 ? bal : 0);
+    const pGas = totalCirculo > 0 ? (gas / totalCirculo) * 360 : 0;
+    const pIng = totalCirculo > 0 ? (ing / totalCirculo) * 360 : 0;
+
+    return { filtrados, ing, gas, bal, aho, pGas, pIng };
   }, [movimientos, vistaMensual, fechaFiltro, busqueda]);
 
+  // 4. ACCIONES
   const registrar = async (tipo) => {
     if (!nombre || !monto || !user) return;
-    const item = {
-      uid: user.uid, nombre: nombre.trim(), monto: parseFloat(monto), tipo,
-      fecha: new Date().toISOString().split('T')[0],
+    const nuevo = {
+      uid: user.uid,
+      nombre: nombre.trim(),
+      monto: parseFloat(monto),
+      tipo,
+      fecha: new Date().toLocaleDateString('en-CA'),
       hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       createdAt: Date.now()
     };
+    setNombre('');
+    setMonto('');
     try {
-      setNombre(''); setMonto('');
-      await addDoc(collection(db, "movimientos"), item);
-    } catch (e) { console.error(e); }
+      await addDoc(collection(db, "movimientos"), nuevo);
+    } catch  {
+      alert("Error al guardar: Revisa las reglas de Firebase");
+    }
   };
 
-  const exportar = () => {
-    const docPdf = new jsPDF();
-    docPdf.text("Reporte de Finanzas", 14, 20);
+  const editarTags = async () => {
+    const nuevos = prompt("Categorías (separadas por coma):", tags.join(", "));
+    if (nuevos && user) {
+      const lista = nuevos.split(",").map(t => t.trim()).slice(0, 4);
+      setTags(lista);
+      await setDoc(doc(db, "config_usuarios", user.uid), { tags: lista });
+    }
+  };
+
+  const exportarPDF = () => {
+    if (!user) return;
+    const docPDF = new jsPDF();
+    docPDF.text(`Reporte Finanzas: ${user.email}`, 14, 20);
     const filas = stats.filtrados.map(m => [m.fecha, m.nombre, m.tipo, `S/ ${m.monto.toFixed(2)}`]);
-    docPdf.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: filas, startY: 30 });
-    docPdf.save("finanzas.pdf");
+    docPDF.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: filas, startY: 30 });
+    docPDF.save(`Finanzas_${fechaFiltro}.pdf`);
   };
 
-  if (loading) return <div className="loading-screen">Cargando datos...</div>;
+  if (loading) return <div className="loading-screen">Sincronizando nube...</div>;
 
   return (
     <div className="main-container">
@@ -93,40 +149,45 @@ function App() {
         <header className="app-header">
           <div className="header-left">
             <h2>Finanzas</h2>
-            <input className="mini-date-picker" type={vistaMensual ? "month" : "date"} value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro} onChange={e => setFechaFiltro(e.target.value)} />
+            <input className="mini-date-picker" type={vistaMensual ? "month" : "date"} 
+                   value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro} 
+                   onChange={e => setFechaFiltro(e.target.value)} />
           </div>
           <div className="header-btns">
             {!user ? (
-              <button className="btn-google-login-oficial" onClick={() => signInWithPopup(auth, googleProvider)}>Login</button>
+              <button onClick={() => signInWithPopup(auth, googleProvider)} className="btn-google-login-oficial">Login</button>
             ) : (
               <img src={user.photoURL} alt="u" className="mini-avatar" onClick={() => signOut(auth)} />
             )}
-            <button className="btn-icon" onClick={exportar}>📄</button>
+            <button className="btn-icon" onClick={exportarPDF}>📄</button>
             <button className="btn-icon" onClick={() => setVistaMensual(!vistaMensual)}>{vistaMensual ? "📅" : "🗓️"}</button>
           </div>
         </header>
 
         <div className="main-card donut-area">
-          <div className="circle-chart-multi" style={{ background: `conic-gradient(#ff4757 0 ${stats.pG}deg, #00d1b2 ${stats.pG}deg ${stats.pG + stats.pI}deg, #a29bfe ${stats.pG + stats.pI}deg 360deg)` }}>
+          <div className="circle-chart-multi" style={{ 
+            background: `conic-gradient(#ff4757 0deg ${stats.pGas}deg, #00d1b2 ${stats.pGas}deg ${stats.pGas + stats.pIng}deg, #a29bfe ${stats.pGas + stats.pIng}deg 360deg)` 
+          }}>
             <div className="inner-circle">
               <div className="chart-info">
                 <p>S/ {stats.bal.toFixed(2)}</p>
-                <span>{vistaMensual ? "Balance Mensual" : "Balance Diario"}</span>
+                <span>{vistaMensual ? "Mes" : "Hoy"}</span>
               </div>
             </div>
           </div>
           <div className="dashboard-stats">
             <div className="stat"><span className="gasto-label">Gastos</span><p className="gasto-monto">S/ {stats.gas.toFixed(2)}</p></div>
             <div className="stat"><span>Ingresos</span><p>S/ {stats.ing.toFixed(2)}</p></div>
-            <div className="stat"><span>Ahorro</span><p style={{color:'#a29bfe'}}>S/ {(stats.bal > 0 ? stats.bal : 0).toFixed(2)}</p></div>
+            <div className="stat"><span>Ahorro</span><p style={{color: '#a29bfe'}}>S/ {stats.aho.toFixed(2)}</p></div>
           </div>
         </div>
 
         <div className="input-section">
           <div className="quick-tags">
             {tags.map((t, i) => <button key={i} onClick={() => setNombre(t)} className="tag-btn">{t}</button>)}
+            <button onClick={editarTags} className="tag-btn">⚙️</button>
           </div>
-          <input placeholder="Detalle" value={nombre} onChange={e => setNombre(e.target.value)} />
+          <input type="text" placeholder="Detalle" value={nombre} onChange={e => setNombre(e.target.value)} />
           <input type="number" placeholder="Monto S/" value={monto} onChange={e => setMonto(e.target.value)} />
           <div className="btn-group-direct">
             <button onClick={() => registrar('ingreso')} className="btn-direct in">💰 Ingreso</button>
@@ -135,7 +196,7 @@ function App() {
         </div>
 
         <div className="history-list">
-          <input className="search-bar" placeholder="🔍 Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+          <input className="search-bar" type="text" placeholder="🔍 Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
           {stats.filtrados.map(m => (
             <div key={m.id} className="history-item">
               <div className="item-info"><strong>{m.nombre}</strong><span>{m.hora}</span></div>
