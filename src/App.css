@@ -350,3 +350,39 @@ input, .search-bar {
   justify-content: center;
   border-radius: 12px;
 }
+.date-select-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.08); /* Un fondo sutil para saber dónde tocar */
+  padding: 4px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.mini-date-picker {
+  background: transparent;
+  border: none;
+  color: var(--accent); /* Tu color morado */
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+}
+
+/* Esto quita el icono feo que pone el navegador por defecto y deja el tuyo */
+.mini-date-picker::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 5px;
+  filter: invert(1); /* Lo hace blanco si es necesario */
+  opacity: 0; /* Lo ocultamos para que solo se vea tu emoji 📅 */
+  position: absolute;
+  right: 0;
+  width: 100%;
+}
+
+.calendar-mini-icon {
+  font-size: 1rem;
+  pointer-events: none; /* Hace que el clic pase a través del emoji al input */
+}

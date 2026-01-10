@@ -259,8 +259,10 @@ function App() {
       <div className="phone-screen">
         <header className="app-header">
          <div className="header-left">
+ <div className="header-left">
   <h2>Finanzas CHC</h2>
   <div className="date-select-wrapper">
+    {/* El icono ahora vive pegado al input */}
     <span className="calendar-mini-icon">📅</span> 
     <input
       className="mini-date-picker"
@@ -269,6 +271,7 @@ function App() {
       onChange={(e) => setFechaFiltro(e.target.value)}
     />
   </div>
+</div>
 </div>
 
           <div className="header-btns">
