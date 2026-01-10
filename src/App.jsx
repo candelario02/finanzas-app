@@ -21,25 +21,29 @@ function App() {
   const [tags, setTags] = useState(["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"]);
   const [busqueda, setBusqueda] = useState('');
   const [vistaMensual, setVistaMensual] = useState(false);
-  const [fechaFiltro, setFechaFiltro] = useState(new Date().toLocaleDateString('en-CA'));
+  const [fechaFiltro, setFechaFiltro] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
-    const init = async () => {
+    const inicializar = async () => {
       try {
         await setPersistence(auth, browserLocalPersistence);
         onAuthStateChanged(auth, async (u) => {
           if (u) {
             setUser(u);
-            const dS = await getDoc(doc(db, "config_usuarios", u.uid));
-            if (dS.exists()) setTags(dS.data().tags);
+            const ref = doc(db, "config_usuarios", u.uid);
+            const snap = await getDoc(ref);
+            if (snap.exists()) setTags(snap.data().tags);
           } else {
             setUser(null);
           }
           setLoading(false);
         });
-      } catch { setLoading(false); }
+      } catch (error) { 
+        console.error(error);
+        setLoading(false); 
+      }
     };
-    init();
+    inicializar();
   }, []);
 
   useEffect(() => {
@@ -54,49 +58,52 @@ function App() {
 
   const stats = useMemo(() => {
     const filtrados = movimientos.filter(m => {
-      const mF = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
-      return mF && m.nombre.toLowerCase().includes(busqueda.toLowerCase());
+      const matchFecha = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
+      const matchBusq = m.nombre.toLowerCase().includes(busqueda.toLowerCase());
+      return matchFecha && matchBusq;
     });
-    const i = filtrados.filter(m => m.tipo === 'ingreso').reduce((a, b) => a + b.monto, 0);
-    const g = filtrados.filter(m => m.tipo === 'gasto').reduce((a, b) => a + b.monto, 0);
-    const b = i - g;
-    const a = b > 0 ? b : 0;
-    const t = i + g + a;
-    return { filtrados, i, g, b, a, pG: t > 0 ? (g/t)*360 : 0, pI: t > 0 ? (i/t)*360 : 0 };
+    const ing = filtrados.filter(m => m.tipo === 'ingreso').reduce((a, b) => a + b.monto, 0);
+    const gas = filtrados.filter(m => m.tipo === 'gasto').reduce((a, b) => a + b.monto, 0);
+    const bal = ing - gas;
+    const aho = bal > 0 ? bal : 0;
+    const total = ing + gas + aho;
+    return { 
+      filtrados, ing, gas, bal, aho, 
+      pG: total > 0 ? (gas/total)*360 : 0, 
+      pI: total > 0 ? (ing/total)*360 : 0 
+    };
   }, [movimientos, vistaMensual, fechaFiltro, busqueda]);
 
   const registrar = async (tipo) => {
     if (!nombre || !monto || !user) return;
-    const n = {
+    const nuevo = {
       uid: user.uid, nombre: nombre.trim(), monto: parseFloat(monto), tipo,
-      fecha: new Date().toLocaleDateString('en-CA'),
+      fecha: new Date().toISOString().split('T')[0],
       hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       createdAt: Date.now()
     };
     setNombre(''); setMonto('');
-    try { await addDoc(collection(db, "movimientos"), n); } catch { alert("Error"); }
+    try { await addDoc(collection(db, "movimientos"), nuevo); } catch (e) { console.error(e); }
   };
 
   const editarTags = async () => {
-    const nT = prompt("Categorías (comas):", tags.join(", "));
-    if (nT && user) {
-      const l = nT.split(",").map(t => t.trim());
-      setTags(l);
-      await setDoc(doc(db, "config_usuarios", user.uid), { tags: l });
+    const val = prompt("Categorías separadas por coma:", tags.join(", "));
+    if (val && user) {
+      const nTags = val.split(",").map(t => t.trim());
+      setTags(nTags);
+      await setDoc(doc(db, "config_usuarios", user.uid), { tags: nTags });
     }
   };
 
-  const exportarPDF = () => {
-    const dP = new jsPDF();
-    dP.text("Reporte Finanzas", 14, 20);
-    dP.autoTable({ 
-      head: [['Fecha', 'Detalle', 'Monto']], 
-      body: stats.filtrados.map(m => [m.fecha, m.nombre, `S/ ${m.monto}`]) 
-    });
-    dP.save("reporte.pdf");
+  const generarPDF = () => {
+    const docPDF = new jsPDF();
+    docPDF.text("Reporte de Finanzas", 14, 20);
+    const filas = stats.filtrados.map(m => [m.fecha, m.nombre, m.tipo, m.monto.toFixed(2)]);
+    docPDF.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto S/']], body: filas, startY: 30 });
+    docPDF.save("finanzas.pdf");
   };
 
-  if (loading) return <div className="loading-screen">Cargando...</div>;
+  if (loading) return <div className="loading-screen">Cargando datos...</div>;
 
   return (
     <div className="main-container">
@@ -107,38 +114,53 @@ function App() {
             <input type={vistaMensual ? "month" : "date"} value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro} onChange={e => setFechaFiltro(e.target.value)} />
           </div>
           <div className="header-btns">
-            {!user ? <button onClick={() => signInWithPopup(auth, googleProvider)}>Login</button> : <img src={user.photoURL} alt="" className="mini-avatar" onClick={() => signOut(auth)} />}
-            <button onClick={exportarPDF}>📄</button>
-            <button onClick={() => setVistaMensual(!vistaMensual)}>{vistaMensual ? "📅" : "🗓️"}</button>
+            {!user ? (
+              <button onClick={() => signInWithPopup(auth, googleProvider)}>Login</button>
+            ) : (
+              <img src={user.photoURL} alt="" className="mini-avatar" onClick={() => signOut(auth)} />
+            )}
+            <button className="btn-icon" onClick={generarPDF}>📄</button>
+            <button className="btn-icon" onClick={() => setVistaMensual(!vistaMensual)}>{vistaMensual ? "📅" : "🗓️"}</button>
           </div>
         </header>
+
         <div className="main-card">
           <div className="circle-chart-multi" style={{ background: `conic-gradient(#ff4757 0 ${stats.pG}deg, #00d1b2 ${stats.pG}deg ${stats.pG + stats.pI}deg, #a29bfe ${stats.pG + stats.pI}deg 360deg)` }}>
-            <div className="inner-circle"><p>S/ {stats.b.toFixed(2)}</p><span>{vistaMensual ? "Mensual" : "Diario"}</span></div>
+            <div className="inner-circle">
+              <div className="chart-info">
+                <p>S/ {stats.bal.toFixed(2)}</p>
+                <span>{vistaMensual ? "Balance Mensual" : "Balance Diario"}</span>
+              </div>
+            </div>
           </div>
           <div className="dashboard-stats">
-            <div className="stat"><span>Gastos</span><p>S/ {stats.g.toFixed(2)}</p></div>
-            <div className="stat"><span>Ingresos</span><p>S/ {stats.i.toFixed(2)}</p></div>
-            <div className="stat"><span>Ahorro</span><p>S/ {stats.a.toFixed(2)}</p></div>
+            <div className="stat"><span>Gastos</span><p>S/ {stats.gas.toFixed(2)}</p></div>
+            <div className="stat"><span>Ingresos</span><p>S/ {stats.ing.toFixed(2)}</p></div>
+            <div className="stat"><span>Ahorro</span><p>S/ {stats.aho.toFixed(2)}</p></div>
           </div>
         </div>
+
         <div className="input-section">
-          <div className="quick-tags">{tags.map((t, i) => <button key={i} onClick={() => setNombre(t)} className="tag-btn">{t}</button>)}<button onClick={editarTags}>⚙️</button></div>
+          <div className="quick-tags">
+            {tags.map((t, i) => <button key={i} onClick={() => setNombre(t)} className="tag-btn">{t}</button>)}
+            <button className="tag-btn-edit" onClick={editarTags}>⚙️</button>
+          </div>
           <input placeholder="Detalle" value={nombre} onChange={e => setNombre(e.target.value)} />
-          <input type="number" placeholder="Monto" value={monto} onChange={e => setMonto(e.target.value)} />
+          <input type="number" placeholder="Monto S/" value={monto} onChange={e => setNombre(e.target.value)} />
           <div className="btn-group-direct">
-            <button onClick={() => registrar('ingreso')} className="btn-direct in">Ingreso</button>
-            <button onClick={() => registrar('gasto')} className="btn-direct out">Gasto</button>
+            <button onClick={() => registrar('ingreso')} className="btn-direct in">💰 Ingreso</button>
+            <button onClick={() => registrar('gasto')} className="btn-direct out">💸 Gasto</button>
           </div>
         </div>
+
         <div className="history-list">
-          <input className="search-bar" placeholder="Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+          <input className="search-bar" placeholder="🔍 Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
           {stats.filtrados.map(m => (
             <div key={m.id} className="history-item">
-              <div><strong>{m.nombre}</strong><span>{m.hora}</span></div>
+              <div className="item-info"><strong>{m.nombre}</strong><span>{m.hora}</span></div>
               <div className="item-right">
-                <span className={m.tipo}>S/ {m.monto.toFixed(2)}</span>
-                <button onClick={() => deleteDoc(doc(db, "movimientos", m.id))}>&times;</button>
+                <span className={`item-amount ${m.tipo}`}>S/ {m.monto.toFixed(2)}</span>
+                <button className="delete-btn" onClick={() => deleteDoc(doc(db, "movimientos", m.id))}>&times;</button>
               </div>
             </div>
           ))}
@@ -147,4 +169,5 @@ function App() {
     </div>
   );
 }
+
 export default App;
