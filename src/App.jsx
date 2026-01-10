@@ -74,7 +74,7 @@ function App() {
         }
       } else {
         setUser(null);
-        setMovimientos([]); // Esto solo se ejecuta cuando el auth cambia, no causa bucle
+        setMovimientos([]); // Limpia datos al cerrar sesión
       }
       setLoading(false);
     });
@@ -86,6 +86,7 @@ function App() {
       DATA REALTIME
   ======================= */
   useEffect(() => {
+    // Si no hay usuario, no intentamos escuchar la base de datos
     if (!user) return;
 
     const q = query(
@@ -98,6 +99,7 @@ function App() {
         ...d.data(),
         id: d.id,
       }));
+      // Ordenar por fecha de creación descendente
       setMovimientos(
         data.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
       );
@@ -131,6 +133,7 @@ function App() {
       .reduce((a, b) => a + b.monto, 0);
 
     const bal = ing - gas;
+    // Cálculo para el gráfico de dona
     const totalCirculo = ing + gas + Math.abs(bal);
 
     return {
@@ -170,15 +173,19 @@ function App() {
       setMonto("");
       showToast("Movimiento guardado", "success");
     } catch (err) {
-      console.error(err);
+      console.error("Error Firebase:", err);
       showToast("Error al guardar", "error");
     }
   };
 
   const handleLogout = async () => {
     if (window.confirm("¿Estás seguro de que quieres salir?")) {
-      await signOut(auth);
-      showToast("Sesión cerrada", "info");
+      try {
+        await signOut(auth);
+        showToast("Sesión cerrada", "info");
+      } catch (err) {
+        console.error("Error Logout:", err);
+      }
     }
   };
 
@@ -190,15 +197,17 @@ function App() {
     if (nuevos === null) return;
 
     const lista = nuevos.split(",").map((t) => t.trim()).filter(t => t !== "");
-    setTags(lista);
     
-    if (user) {
-        try {
-            await setDoc(doc(db, "config_usuarios", user.uid), { tags: lista });
-            showToast("Favoritos actualizados", "success");
-        } catch (err) {
-            console.error(err);
-            showToast("Error al guardar favoritos", "error");
+    if (lista.length > 0) {
+        setTags(lista);
+        if (user) {
+            try {
+                await setDoc(doc(db, "config_usuarios", user.uid), { tags: lista });
+                showToast("Favoritos actualizados", "success");
+            } catch (err) {
+                console.error("Error Tags:", err);
+                showToast("Error al guardar favoritos", "error");
+            }
         }
     }
   };
@@ -230,7 +239,7 @@ function App() {
         docPDF.save(`finanzas_${fechaFiltro}.pdf`);
         showToast("PDF descargado", "success");
     } catch (err) {
-        console.error(err);
+        console.error("Error PDF:", err);
         showToast("Error en PDF", "error");
     }
   };
@@ -296,7 +305,7 @@ function App() {
             <div className="inner-circle">
               <div className="chart-info">
                 <p>S/ {stats.bal.toFixed(2)}</p>
-                <span>Balance</span>
+                <span>{vistaMensual ? "Mes" : "Día"}</span>
               </div>
             </div>
           </div>
