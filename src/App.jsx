@@ -23,11 +23,9 @@ import {
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
-/* eslint-disable no-unused-vars */
-
 function App() {
   /* =======================
-     STATES
+      STATES
   ======================= */
   const [user, setUser] = useState(null);
   const [movimientos, setMovimientos] = useState([]);
@@ -51,7 +49,7 @@ function App() {
   );
 
   /* =======================
-     TOAST
+      TOAST
   ======================= */
   const showToast = (msg, type = "info") => {
     setToast({ msg, type });
@@ -59,20 +57,24 @@ function App() {
   };
 
   /* =======================
-     AUTH
+      AUTH & PREFERENCIAS
   ======================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
-        const ref = doc(db, "config_usuarios", u.uid);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          setTags(snap.data().tags);
+        try {
+          const ref = doc(db, "config_usuarios", u.uid);
+          const snap = await getDoc(ref);
+          if (snap.exists()) {
+            setTags(snap.data().tags);
+          }
+        } catch (err) {
+          console.error("Error al cargar tags:", err);
         }
       } else {
         setUser(null);
-        setMovimientos([]);
+        setMovimientos([]); // Esto solo se ejecuta cuando el auth cambia, no causa bucle
       }
       setLoading(false);
     });
@@ -81,7 +83,7 @@ function App() {
   }, []);
 
   /* =======================
-     DATA REALTIME
+      DATA REALTIME
   ======================= */
   useEffect(() => {
     if (!user) return;
@@ -105,7 +107,7 @@ function App() {
   }, [user]);
 
   /* =======================
-     STATS
+      STATS (CÁLCULOS)
   ======================= */
   const stats = useMemo(() => {
     const filtrados = movimientos.filter((m) => {
@@ -129,23 +131,26 @@ function App() {
       .reduce((a, b) => a + b.monto, 0);
 
     const bal = ing - gas;
-    const total = ing + gas + Math.max(bal, 0);
+    const totalCirculo = ing + gas + Math.abs(bal);
 
     return {
       filtrados,
       ing,
       gas,
       bal,
-      pGas: total ? (gas / total) * 360 : 0,
-      pIng: total ? (ing / total) * 360 : 0,
+      pGas: totalCirculo ? (gas / totalCirculo) * 360 : 0,
+      pIng: totalCirculo ? (ing / totalCirculo) * 360 : 0,
     };
   }, [movimientos, vistaMensual, fechaFiltro, busqueda]);
 
   /* =======================
-     ACTIONS
+      ACCIONES
   ======================= */
   const registrar = async (tipo) => {
-    if (!nombre || !monto || !user) return;
+    if (!nombre || !monto || !user) {
+        showToast("Completa los campos", "error");
+        return;
+    }
 
     try {
       await addDoc(collection(db, "movimientos"), {
@@ -164,63 +169,89 @@ function App() {
       setNombre("");
       setMonto("");
       showToast("Movimiento guardado", "success");
-    } catch {
+    } catch (err) {
+      console.error(err);
       showToast("Error al guardar", "error");
+    }
+  };
+
+  const handleLogout = async () => {
+    if (window.confirm("¿Estás seguro de que quieres salir?")) {
+      await signOut(auth);
+      showToast("Sesión cerrada", "info");
     }
   };
 
   const editarTags = async () => {
     const nuevos = prompt(
-      "Edita tus categorías separadas por coma:",
+      "Edita tus palabras favoritas (separadas por coma):",
       tags.join(", ")
     );
-    if (!nuevos || !user) return;
+    if (nuevos === null) return;
 
-    const lista = nuevos.split(",").map((t) => t.trim());
+    const lista = nuevos.split(",").map((t) => t.trim()).filter(t => t !== "");
     setTags(lista);
-    await setDoc(doc(db, "config_usuarios", user.uid), { tags: lista });
+    
+    if (user) {
+        try {
+            await setDoc(doc(db, "config_usuarios", user.uid), { tags: lista });
+            showToast("Favoritos actualizados", "success");
+        } catch (err) {
+            console.error(err);
+            showToast("Error al guardar favoritos", "error");
+        }
+    }
   };
 
   const exportarPDF = () => {
-    const pdf = new jsPDF();
-    pdf.text(`Reporte Finanzas - ${user?.displayName}`, 14, 20);
-    pdf.autoTable({
-      startY: 30,
-      head: [["Fecha", "Detalle", "Tipo", "Monto"]],
-      body: stats.filtrados.map((m) => [
-        m.fecha,
-        m.nombre,
-        m.tipo,
-        `S/ ${m.monto.toFixed(2)}`,
-      ]),
-    });
-    pdf.save("finanzas.pdf");
-    showToast("PDF generado", "success");
+    try {
+        const docPDF = new jsPDF();
+        docPDF.setFontSize(18);
+        docPDF.text("Reporte de Finanzas", 14, 20);
+        
+        docPDF.setFontSize(11);
+        docPDF.text(`Usuario: ${user?.displayName || "Usuario"}`, 14, 30);
+        docPDF.text(`Filtro: ${fechaFiltro}`, 14, 37);
+
+        const rows = stats.filtrados.map((m) => [
+          m.fecha,
+          m.hora || "--:--",
+          m.nombre,
+          m.tipo.toUpperCase(),
+          `S/ ${m.monto.toFixed(2)}`
+        ]);
+
+        docPDF.autoTable({
+          startY: 45,
+          head: [["Fecha", "Hora", "Detalle", "Tipo", "Monto"]],
+          body: rows,
+        });
+
+        docPDF.save(`finanzas_${fechaFiltro}.pdf`);
+        showToast("PDF descargado", "success");
+    } catch (err) {
+        console.error(err);
+        showToast("Error en PDF", "error");
+    }
   };
 
   /* =======================
-     RENDER
+      RENDER
   ======================= */
   if (loading) {
-    return <div className="loading-screen">Sincronizando nube...</div>;
+    return <div className="loading-screen">Sincronizando...</div>;
   }
 
   return (
     <div className="main-container">
       <div className="phone-screen">
-
-        {/* HEADER */}
         <header className="app-header">
           <div className="header-left">
             <h2>Finanzas</h2>
             <input
               className="mini-date-picker"
               type={vistaMensual ? "month" : "date"}
-              value={
-                vistaMensual
-                  ? fechaFiltro.substring(0, 7)
-                  : fechaFiltro
-              }
+              value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro}
               onChange={(e) => setFechaFiltro(e.target.value)}
             />
           </div>
@@ -229,10 +260,7 @@ function App() {
             {!user ? (
               <button
                 className="btn-google-mini"
-                onClick={async () => {
-                  await signInWithPopup(auth, googleProvider);
-                  showToast("Sesión iniciada", "success");
-                }}
+                onClick={() => signInWithPopup(auth, googleProvider)}
               >
                 Login
               </button>
@@ -241,15 +269,10 @@ function App() {
                 src={user.photoURL}
                 alt="u"
                 className="mini-avatar"
-                onClick={async () => {
-                  await signOut(auth);
-                  showToast("Sesión cerrada", "info");
-                }}
+                onClick={handleLogout}
               />
             )}
-            <button className="btn-icon" onClick={exportarPDF}>
-              📄
-            </button>
+            <button className="btn-icon" onClick={exportarPDF}>📄</button>
             <button
               className="btn-icon"
               onClick={() => setVistaMensual(!vistaMensual)}
@@ -259,7 +282,6 @@ function App() {
           </div>
         </header>
 
-        {/* DASHBOARD */}
         <div className="main-card donut-area">
           <div
             className="circle-chart-multi"
@@ -274,9 +296,7 @@ function App() {
             <div className="inner-circle">
               <div className="chart-info">
                 <p>S/ {stats.bal.toFixed(2)}</p>
-                <span>
-                  {vistaMensual ? "Balance Mensual" : "Balance Diario"}
-                </span>
+                <span>Balance</span>
               </div>
             </div>
           </div>
@@ -297,7 +317,6 @@ function App() {
           </div>
         </div>
 
-        {/* INPUTS */}
         <div className="input-section">
           <div className="quick-tags">
             {tags.map((t, i) => (
@@ -305,17 +324,16 @@ function App() {
                 key={i}
                 className="tag-btn"
                 onClick={() => setNombre(t)}
+                onContextMenu={(e) => { e.preventDefault(); editarTags(); }}
               >
                 {t}
               </button>
             ))}
-            <button className="tag-btn-edit" onClick={editarTags}>
-              ⚙️
-            </button>
+            <button className="tag-btn-edit" onClick={editarTags}>⚙️</button>
           </div>
 
           <input
-            placeholder="Detalle"
+            placeholder="Detalle..."
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
           />
@@ -328,22 +346,15 @@ function App() {
           />
 
           <div className="btn-group-direct">
-            <button
-              className="btn-direct in"
-              onClick={() => registrar("ingreso")}
-            >
+            <button className="btn-direct in" onClick={() => registrar("ingreso")}>
               💰 Ingreso
             </button>
-            <button
-              className="btn-direct out"
-              onClick={() => registrar("gasto")}
-            >
+            <button className="btn-direct out" onClick={() => registrar("gasto")}>
               💸 Gasto
             </button>
           </div>
         </div>
 
-        {/* HISTORIAL */}
         <div className="history-list">
           <input
             className="search-bar"
@@ -360,13 +371,14 @@ function App() {
               </div>
               <div className="item-right">
                 <span className={`item-amount ${m.tipo}`}>
-                  S/ {m.monto.toFixed(2)}
+                  {m.tipo === 'gasto' ? '-' : '+'} S/ {m.monto.toFixed(2)}
                 </span>
                 <button
                   className="delete-btn"
-                  onClick={() =>
-                    deleteDoc(doc(db, "movimientos", m.id))
-                  }
+                  onClick={() => {
+                      if(window.confirm("¿Eliminar?")) 
+                        deleteDoc(doc(db, "movimientos", m.id))
+                  }}
                 >
                   ×
                 </button>
@@ -376,11 +388,7 @@ function App() {
         </div>
       </div>
 
-      {toast && (
-        <div className={`toast ${toast.type}`}>
-          {toast.msg}
-        </div>
-      )}
+      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
     </div>
   );
 }

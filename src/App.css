@@ -1,93 +1,94 @@
+/* ================== VARIABLES ================== */
 :root {
   --bg-dark: #000000;
   --card-dark: #121212;
-  --accent: #bb86fc;   /* Morado Ahorro */
-  --success: #00d1b2;  /* Turquesa Ingreso */
-  --error: #ff4757;    /* Rojo Gasto */
+  --accent: #bb86fc;
+  --success: #00d1b2;
+  --error: #ff4757;
   --text: #ffffff;
 }
 
-body {
+/* ================== BASE ================== */
+html, body, #root {
   margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
   background: var(--bg-dark);
   color: var(--text);
   font-family: 'Inter', sans-serif;
 }
 
+/* ================== LAYOUT ================== */
 .main-container {
+  min-height: 100vh;
   display: flex;
   justify-content: center;
-  padding: 15px;
-  min-height: 100vh;
 }
 
 .phone-screen {
   width: 100%;
-  max-width: 450px;
+  max-width: 380px;
+  min-height: 100vh;
+  padding: 15px;
   display: flex;
   flex-direction: column;
   gap: 15px;
+  background: var(--bg-dark);
 }
 
+/* ================== HEADER ================== */
 .app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 5px 0;
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
 }
 
 .header-btns {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.btn-google-mini {
-  background: white;
-  color: #000;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  cursor: pointer;
+  gap: 10px;
 }
 
 .mini-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  cursor: pointer;
   border: 2px solid var(--accent);
+  cursor: pointer;
 }
 
 .btn-icon {
   background: #1a1a1a;
   border: none;
-  padding: 10px;
+  padding: 8px;
   border-radius: 10px;
-  cursor: pointer;
-  font-size: 1.1rem;
   color: white;
+  cursor: pointer;
 }
 
+/* ================== CARD ================== */
 .main-card {
   background: var(--card-dark);
-  padding: 30px 20px;
-  border-radius: 35px;
+  padding: 25px 15px;
+  border-radius: 30px;
   text-align: center;
 }
 
-/* DONA GRANDE */
+/* ================== DONA ================== */
 .circle-chart-multi {
   width: 210px;
   height: 210px;
   border-radius: 50%;
   margin: 0 auto;
   display: flex;
-  align-items: center;
   justify-content: center;
-  transition: background 0.6s ease-in-out;
+  align-items: center;
 }
 
 .inner-circle {
@@ -96,302 +97,494 @@ body {
   background: var(--card-dark);
   border-radius: 50%;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
 }
 
-.chart-info p { font-size: 1.8rem; font-weight: 800; margin: 0; }
-.chart-info span { opacity: 0.5; font-size: 0.75rem; letter-spacing: 0.5px; }
+.chart-info p {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: bold;
+}
 
+.chart-info span {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+/* ================== STATS ================== */
 .dashboard-stats {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  margin-top: 25px;
-  padding-top: 20px;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 20px;
   border-top: 1px solid #222;
+  padding-top: 15px;
 }
 
-.stat span { font-size: 0.7rem; opacity: 0.5; display: block; margin-bottom: 5px; }
-.stat p { font-size: 0.9rem; font-weight: bold; margin: 0; }
+.stat span {
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
 
+.stat p {
+  margin: 0;
+  font-weight: bold;
+}
+
+.gasto-monto {
+  color: var(--error);
+}
+
+/* ================== INPUTS ================== */
 .input-section {
   background: var(--card-dark);
   padding: 20px;
   border-radius: 25px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
-
-.quick-tags { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-
-.tag-btn {
-  background: #222;
-  color: white;
-  border: 1px solid #333;
-  padding: 10px 16px;
-  border-radius: 18px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: 0.2s;
-}
-
-.tag-btn:active { transform: scale(0.95); background: var(--accent); }
 
 input {
-  padding: 14px;
-  border-radius: 14px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
   border: 1px solid #333;
   background: #1a1a1a;
   color: white;
-  font-size: 1rem;
+  box-sizing: border-box;
 }
 
-.btn-group-direct { display: flex; gap: 10px; }
-.btn-direct { flex: 1; padding: 16px; border-radius: 15px; border: none; font-weight: bold; font-size: 1rem; cursor: pointer; }
-.btn-direct.in { background: var(--success); color: black; }
-.btn-direct.out { background: var(--error); color: white; }
+/* ================== TAGS ================== */
+.quick-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
 
-.search-box input {
-  width: 100%;
-  border-radius: 30px;
-  background: var(--card-dark);
+.tag-btn {
+  padding: 8px 14px;
+  border-radius: 18px;
   border: 1px solid #333;
+  background: #222;
+  color: white;
+  cursor: pointer;
+}
+
+.tag-btn:active {
+  background: var(--accent);
+}
+
+/* ================== BOTONES ================== */
+.btn-group-direct {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-direct {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-direct.in {
+  background: var(--success);
+  color: black;
+}
+
+.btn-direct.out {
+  background: var(--error);
+  color: white;
+}
+
+/* ================== HISTORIAL ================== */
+.search-bar {
+  margin-bottom: 10px;
+  border-radius: 20px;
 }
 
 .history-item {
   display: flex;
   align-items: center;
   background: var(--card-dark);
-  padding: 15px;
-  border-radius: 20px;
-  margin-bottom: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  margin-bottom: 8px;
 }
 
-.icon-box {
-  width: 45px; height: 45px; border-radius: 12px;
-  margin-right: 15px; display: flex; align-items: center; justify-content: center;
-  background: #1a1a1a;
+.item-info {
+  flex: 1;
 }
 
-.item-info { flex: 1; }
-.item-info strong { display: block; font-size: 1rem; }
-.item-info span { font-size: 0.75rem; opacity: 0.4; }
-
-.item-right { display: flex; align-items: center; gap: 10px; }
-.item-amount { font-weight: bold; font-size: 1rem; }
-.item-amount.ingreso { color: var(--success); }
-.item-amount.gasto { color: var(--error); }
-
-.delete-btn { background: transparent; color: #555; border: none; font-size: 1.6rem; cursor: pointer; }
-
-.date-selector-area {
-  text-align: center;
-  background: var(--card-dark);
-  padding: 10px;
-  border-radius: 50px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
+.item-info strong {
+  display: block;
 }
 
-.date-input {
-  background: transparent;
-  border: none;
-  color: var(--accent);
-  font-weight: bold;
-  padding: 0;
-  cursor: pointer;
+.item-info span {
+  font-size: 0.75rem;
+  opacity: 0.5;
 }
-/* BOTÓN GOOGLE ESTILO OFICIAL */
-.btn-google-login {
+
+.item-right {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: white;
-  color: #333;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-weight: bold;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-.btn-google-login img { width: 18px; }
-
-/* NÚMEROS DE GASTO EN ROJO */
-.txt-gasto {
-  color: #ff4757 !important;
-  font-size: 1rem !important;
-}
-.lbl-gasto {
-  color: #ff4757;
-  font-weight: bold;
 }
 
-/* HISTORIAL: GASTOS EN ROJO */
-.item-amount.gasto {
-  color: #ff4757;
-  font-weight: bold;
-}
 .item-amount.ingreso {
-  color: #00d1b2;
+  color: var(--success);
   font-weight: bold;
 }
 
-/* INPUTS MÁS LIMPIOS */
-input {
-  width: 100%;
-  box-sizing: border-box; /* Evita que se salgan de la pantalla */
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid #333;
-  background: #1a1a1a;
-  color: white;
-}
-
-/* El resto de tu CSS anterior se mantiene igual... */
-/* BOTON GOOGLE OFICIAL */
-.btn-google-login-oficial {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: white;
-  color: #3c4043;
-  border: 1px solid #dadce0;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-weight: 600;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: box-shadow 0.2s;
-}
-
-.btn-google-login-oficial:hover {
-  box-shadow: 0 1px 3px rgba(60,64,67,0.3);
-}
-
-.btn-google-login-oficial img {
-  width: 16px;
-  height: 16px;
-}
-
-/* GASTOS EN ROJO EN EL DASHBOARD */
-.gasto-label {
-  color: #ff4757 !important;
-  font-weight: bold;
-}
-
-.gasto-monto {
-  color: #ff4757 !important;
-}
-
-/* HISTORIAL: GASTOS EN ROJO */
 .item-amount.gasto {
-  color: #ff4757 !important;
+  color: var(--error);
+  font-weight: bold;
 }
 
-/* Asegurar que el contenedor principal no oculte el PDF */
-.main-container {
-  overflow-y: auto;
-}.header-left {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.mini-date-picker {
+.delete-btn {
   background: transparent;
   border: none;
-  color: #bb86fc;
-  font-size: 0.8rem;
-  font-weight: bold;
+  color: #555;
+  font-size: 1.4rem;
   cursor: pointer;
-  padding: 0;
 }
 
-/* Maximizamos la Dona */
-.donut-area {
-  padding: 20px 10px !important;
-  margin-top: -10px;
-}
-
-.circle-chart-multi {
-  width: 210px;
-  height: 210px;
-  border-radius: 50%;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.inner-circle {
-  width: 175px;
-  height: 175px;
-  background: #121212;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Colores específicos */
-.gasto-label, .gasto-monto, .item-amount.gasto {
-  color: #ff4757 !important;
-}
-
-.item-amount.ingreso {
-  color: #00d1b2 !important;
-}
-
-.search-bar {
-  width: 100%;
-  margin-bottom: 10px;
-  border-radius: 20px;
-  padding: 8px 15px;
-  background: #1a1a1a;
-  border: 1px solid #333;
-  color: white;
-}
-.loading-screen {
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #000;
-  color: #bb86fc;
-  font-size: 1.5rem;
-  font-weight: bold;
-}
+/* ================== TOAST ================== */
 .toast {
   position: fixed;
   bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
   background: #1a1a1a;
-  color: white;
   padding: 12px 20px;
   border-radius: 14px;
-  font-weight: 600;
+  font-weight: bold;
   z-index: 9999;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-  animation: fadeIn 0.3s ease;
 }
 
-.toast.success { color: #00d1b2; }
-.toast.error { color: #ff4757; }
-.toast.info { color: #bb86fc; }
+.toast.success { color: var(--success); }
+.toast.error { color: var(--error); }
+.toast.info { color: var(--accent); }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translate(-50%, 10px); }
-  to   { opacity: 1; transform: translate(-50%, 0); }
+/* ================== LOADING ================== */
+.loading-screen {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--accent);
+  font-size: 1.4rem;
 }
+/* ================== VARIABLES ================== */
+:root {
+  --bg-dark: #000000;
+  --card-dark: #121212;
+  --accent: #bb86fc;
+  --success: #00d1b2;
+  --error: #ff4757;
+  --text: #ffffff;
+}
+
+/* ================== BASE ================== */
 html, body, #root {
   margin: 0;
   padding: 0;
-  height: 100%;
   width: 100%;
-  background: #000;
+  min-height: 100vh;
+  background: var(--bg-dark);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+}
+
+/* ================== LAYOUT ================== */
+.main-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.phone-screen {
+  width: 100%;
+  max-width: 380px;
+  min-height: 100vh;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  background: var(--bg-dark);
+}
+
+/* ================== HEADER ================== */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-btns {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mini-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  cursor: pointer;
+}
+
+.btn-icon {
+  background: #1a1a1a;
+  border: none;
+  padding: 8px;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+}
+
+/* ================== CARD ================== */
+.main-card {
+  background: var(--card-dark);
+  padding: 25px 15px;
+  border-radius: 30px;
+  text-align: center;
+}
+
+/* ================== DONA ================== */
+.circle-chart-multi {
+  width: 210px;
+  height: 210px;
+  border-radius: 50%;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.inner-circle {
+  width: 170px;
+  height: 170px;
+  background: var(--card-dark);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.chart-info p {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+.chart-info span {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+/* ================== STATS ================== */
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 20px;
+  border-top: 1px solid #222;
+  padding-top: 15px;
+}
+
+.stat span {
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+.stat p {
+  margin: 0;
+  font-weight: bold;
+}
+
+.gasto-monto {
+  color: var(--error);
+}
+
+/* ================== INPUTS ================== */
+.input-section {
+  background: var(--card-dark);
+  padding: 20px;
+  border-radius: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: white;
+  box-sizing: border-box;
+}
+
+/* ================== TAGS ================== */
+.quick-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.tag-btn {
+  padding: 8px 14px;
+  border-radius: 18px;
+  border: 1px solid #333;
+  background: #222;
+  color: white;
+  cursor: pointer;
+}
+
+.tag-btn:active {
+  background: var(--accent);
+}
+
+/* ================== BOTONES ================== */
+.btn-group-direct {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-direct {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-direct.in {
+  background: var(--success);
+  color: black;
+}
+
+.btn-direct.out {
+  background: var(--error);
+  color: white;
+}
+
+/* ================== HISTORIAL ================== */
+.search-bar {
+  margin-bottom: 10px;
+  border-radius: 20px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  background: var(--card-dark);
+  padding: 14px;
+  border-radius: 18px;
+  margin-bottom: 8px;
+}
+
+.item-info {
+  flex: 1;
+}
+
+.item-info strong {
+  display: block;
+}
+
+.item-info span {
+  font-size: 0.75rem;
+  opacity: 0.5;
+}
+
+.item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.item-amount.ingreso {
+  color: var(--success);
+  font-weight: bold;
+}
+
+.item-amount.gasto {
+  color: var(--error);
+  font-weight: bold;
+}
+
+.delete-btn {
+  background: transparent;
+  border: none;
+  color: #555;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+/* ================== TOAST ================== */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a1a;
+  padding: 12px 20px;
+  border-radius: 14px;
+  font-weight: bold;
+  z-index: 9999;
+}
+
+.toast.success { color: var(--success); }
+.toast.error { color: var(--error); }
+.toast.info { color: var(--accent); }
+
+/* ================== LOADING ================== */
+.loading-screen {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--accent);
+  font-size: 1.4rem;
+}
+/* Añade esto a tu archivo App.css */
+
+.edit-hint {
+  font-size: 0.65rem;
+  text-align: center;
+  opacity: 0.5;
+  margin-bottom: -5px;
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mini-date-picker {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font-size: 0.9rem;
+    padding: 0;
+    width: auto;
+    cursor: pointer;
+}
+
+/* Mejora para los botones favoritos al pulsar */
+.tag-btn:active {
+    transform: scale(0.95);
+    background: var(--accent);
+    color: black;
 }
