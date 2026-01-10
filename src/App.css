@@ -365,3 +365,26 @@ input {
   font-size: 1.5rem;
   font-weight: bold;
 }
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a1a;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 14px;
+  font-weight: 600;
+  z-index: 9999;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  animation: fadeIn 0.3s ease;
+}
+
+.toast.success { color: #00d1b2; }
+.toast.error { color: #ff4757; }
+.toast.info { color: #bb86fc; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
