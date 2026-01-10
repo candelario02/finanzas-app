@@ -1,14 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './App.css';
 import { db, auth, googleProvider } from './firebase';
-import { 
-  signInWithPopup, signOut, onAuthStateChanged, 
-  setPersistence, browserLocalPersistence 
-} from 'firebase/auth';
-import { 
-  collection, addDoc, query, where, onSnapshot, 
-  deleteDoc, doc, getDoc, setDoc 
-} from 'firebase/firestore';
+import { signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -34,11 +28,10 @@ function App() {
             if (s.exists()) setTags(s.data().tags);
           } else {
             setUser(null);
-            setMovimientos([]);
           }
           setLoading(false);
         });
-      } catch { setLoading(false); }
+      } catch (e) { setLoading(false); }
     };
     init();
   }, []);
@@ -54,48 +47,45 @@ function App() {
   }, [user]);
 
   const stats = useMemo(() => {
-    const f = movimientos.filter(m => {
-      const mF = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
-      return mF && m.nombre.toLowerCase().includes(busqueda.toLowerCase());
+    const filtrados = movimientos.filter(m => {
+      const coincideFecha = vistaMensual ? m.fecha.startsWith(fechaFiltro.substring(0, 7)) : m.fecha === fechaFiltro;
+      const coincideBusqueda = m.nombre.toLowerCase().includes(busqueda.toLowerCase());
+      return coincideFecha && coincideBusqueda;
     });
-    const i = f.filter(m => m.tipo === 'ingreso').reduce((a, b) => a + b.monto, 0);
-    const g = f.filter(m => m.tipo === 'gasto').reduce((a, b) => a + b.monto, 0);
-    const bal = i - g;
-    const aho = bal > 0 ? bal : 0;
-    const t = i + g + aho;
-    return { f, i, g, bal, aho, pG: t > 0 ? (g/t)*360 : 0, pI: t > 0 ? (i/t)*360 : 0 };
+    const ing = filtrados.filter(m => m.tipo === 'ingreso').reduce((a, b) => a + b.monto, 0);
+    const gas = filtrados.filter(m => m.tipo === 'gasto').reduce((a, b) => a + b.monto, 0);
+    const bal = ing - gas;
+    const total = ing + gas + (bal > 0 ? bal : 0);
+    return { 
+      filtrados, ing, gas, bal,
+      pG: total > 0 ? (gas / total) * 360 : 0,
+      pI: total > 0 ? (ing / total) * 360 : 0 
+    };
   }, [movimientos, vistaMensual, fechaFiltro, busqueda]);
 
   const registrar = async (tipo) => {
     if (!nombre || !monto || !user) return;
-    const n = {
+    const item = {
       uid: user.uid, nombre: nombre.trim(), monto: parseFloat(monto), tipo,
       fecha: new Date().toISOString().split('T')[0],
       hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       createdAt: Date.now()
     };
-    setNombre(''); setMonto('');
-    try { await addDoc(collection(db, "movimientos"), n); } catch (e) { console.error(e); }
+    try {
+      setNombre(''); setMonto('');
+      await addDoc(collection(db, "movimientos"), item);
+    } catch (e) { console.error(e); }
   };
 
-  const editarTags = async () => {
-    const v = prompt("Categorías (comas):", tags.join(", "));
-    if (v && user) {
-      const nt = v.split(",").map(t => t.trim());
-      setTags(nt);
-      await setDoc(doc(db, "config_usuarios", user.uid), { tags: nt });
-    }
+  const exportar = () => {
+    const docPdf = new jsPDF();
+    docPdf.text("Reporte de Finanzas", 14, 20);
+    const filas = stats.filtrados.map(m => [m.fecha, m.nombre, m.tipo, `S/ ${m.monto.toFixed(2)}`]);
+    docPdf.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: filas, startY: 30 });
+    docPdf.save("finanzas.pdf");
   };
 
-  const exportarPDF = () => {
-    const dP = new jsPDF();
-    dP.text("Reporte Finanzas", 14, 20);
-    const filas = stats.f.map(m => [m.fecha, m.nombre, m.tipo, `S/ ${m.monto.toFixed(2)}`]);
-    dP.autoTable({ head: [['Fecha', 'Detalle', 'Tipo', 'Monto']], body: filas, startY: 30 });
-    dP.save("finanzas.pdf");
-  };
-
-  if (loading) return <div className="loading-screen">Sincronizando nube...</div>;
+  if (loading) return <div className="loading-screen">Cargando datos...</div>;
 
   return (
     <div className="main-container">
@@ -111,7 +101,7 @@ function App() {
             ) : (
               <img src={user.photoURL} alt="u" className="mini-avatar" onClick={() => signOut(auth)} />
             )}
-            <button className="btn-icon" onClick={exportarPDF}>📄</button>
+            <button className="btn-icon" onClick={exportar}>📄</button>
             <button className="btn-icon" onClick={() => setVistaMensual(!vistaMensual)}>{vistaMensual ? "📅" : "🗓️"}</button>
           </div>
         </header>
@@ -126,16 +116,15 @@ function App() {
             </div>
           </div>
           <div className="dashboard-stats">
-            <div className="stat"><span className="gasto-label">Gastos</span><p className="gasto-monto">S/ {stats.g.toFixed(2)}</p></div>
-            <div className="stat"><span>Ingresos</span><p>S/ {stats.i.toFixed(2)}</p></div>
-            <div className="stat"><span>Ahorro</span><p style={{color:'#a29bfe'}}>S/ {stats.aho.toFixed(2)}</p></div>
+            <div className="stat"><span className="gasto-label">Gastos</span><p className="gasto-monto">S/ {stats.gas.toFixed(2)}</p></div>
+            <div className="stat"><span>Ingresos</span><p>S/ {stats.ing.toFixed(2)}</p></div>
+            <div className="stat"><span>Ahorro</span><p style={{color:'#a29bfe'}}>S/ {(stats.bal > 0 ? stats.bal : 0).toFixed(2)}</p></div>
           </div>
         </div>
 
         <div className="input-section">
           <div className="quick-tags">
-            {tags.map((t, idx) => <button key={idx} onClick={() => setNombre(t)} className="tag-btn">{t}</button>)}
-            <button className="tag-btn" onClick={editarTags}>⚙️</button>
+            {tags.map((t, i) => <button key={i} onClick={() => setNombre(t)} className="tag-btn">{t}</button>)}
           </div>
           <input placeholder="Detalle" value={nombre} onChange={e => setNombre(e.target.value)} />
           <input type="number" placeholder="Monto S/" value={monto} onChange={e => setMonto(e.target.value)} />
@@ -147,7 +136,7 @@ function App() {
 
         <div className="history-list">
           <input className="search-bar" placeholder="🔍 Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
-          {stats.f.map(m => (
+          {stats.filtrados.map(m => (
             <div key={m.id} className="history-item">
               <div className="item-info"><strong>{m.nombre}</strong><span>{m.hora}</span></div>
               <div className="item-right">
