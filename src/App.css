@@ -38,11 +38,10 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  background: var(--bg-dark);
 }
 
 /* ==========================================================================
-   HEADER Y CONTROLES
+   HEADER
    ========================================================================== */
 .app-header {
   display: flex;
@@ -53,7 +52,7 @@ html, body, #root {
 .header-btns {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .mini-avatar {
@@ -72,7 +71,23 @@ html, body, #root {
   border-radius: 10px;
   font-size: 1.2rem;
   cursor: pointer;
-  transition: transform 0.2s;
+}
+
+.btn-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.btn-label {
+  position: absolute;
+  top: -16px;
+  font-size: 0.6rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
 }
 
 .mini-date-picker {
@@ -81,11 +96,10 @@ html, body, #root {
   color: var(--accent);
   font-size: 0.9rem;
   font-weight: bold;
-  cursor: pointer;
 }
 
 /* ==========================================================================
-   DASHBOARD (DONA Y STATS)
+   DASHBOARD
    ========================================================================== */
 .main-card {
   background: var(--card-dark);
@@ -95,8 +109,8 @@ html, body, #root {
 }
 
 .circle-chart-multi {
-  width: 210px;
-  height: 210px;
+  width: 200px;
+  height: 200px;
   border-radius: 50%;
   margin: 0 auto;
   display: flex;
@@ -105,8 +119,8 @@ html, body, #root {
 }
 
 .inner-circle {
-  width: 170px;
-  height: 170px;
+  width: 165px;
+  height: 165px;
   background: var(--card-dark);
   border-radius: 50%;
   display: flex;
@@ -116,12 +130,12 @@ html, body, #root {
 
 .chart-info p {
   margin: 0;
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   font-weight: bold;
 }
 
 .chart-info span {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   opacity: 0.6;
 }
 
@@ -133,16 +147,12 @@ html, body, #root {
   padding-top: 15px;
 }
 
-.stat p {
-  margin: 5px 0 0 0;
-  font-weight: bold;
-  font-size: 0.9rem;
-}
-
+.stat span { font-size: 0.75rem; opacity: 0.7; }
+.stat p { margin: 4px 0 0 0; font-weight: bold; font-size: 0.85rem; }
 .gasto-monto { color: var(--error); }
 
 /* ==========================================================================
-   SECCIÓN DE ENTRADA (INPUTS Y TAGS)
+   INPUTS
    ========================================================================== */
 .input-section {
   background: var(--card-dark);
@@ -153,7 +163,7 @@ html, body, #root {
   gap: 12px;
 }
 
-input {
+input, .search-bar {
   width: 100%;
   padding: 12px;
   border-radius: 12px;
@@ -171,18 +181,13 @@ input {
 }
 
 .tag-btn {
-  padding: 8px 14px;
-  border-radius: 18px;
+  padding: 7px 12px;
+  border-radius: 15px;
   border: 1px solid #333;
   background: #222;
   color: white;
   cursor: pointer;
-  transition: all 0.2s;
-}
-
-.tag-btn:active {
-  transform: scale(0.9);
-  background: var(--accent);
+  font-size: 0.85rem;
 }
 
 .btn-group-direct {
@@ -203,34 +208,54 @@ input {
 .btn-direct.out { background: var(--error); color: white; }
 
 /* ==========================================================================
-   HISTORIAL
+   HISTORIAL (FILAS PEQUEÑAS Y SEPARADAS)
    ========================================================================== */
 .history-item {
   display: flex;
   align-items: center;
   background: var(--card-dark);
-  padding: 14px;
-  border-radius: 18px;
-  margin-bottom: 8px;
+  padding: 8px 14px; /* RECORTE: De 14px a 8px para fila más delgada */
+  border-radius: 15px;
+  margin-bottom: 6px;
 }
 
-.item-info { flex: 1; }
-.item-info span { font-size: 0.75rem; opacity: 0.5; }
+.item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* SEPARACIÓN: Espacio entre nombre y hora */
+}
 
+.item-info strong {
+  font-size: 0.9rem;
+}
+
+.item-info span {
+  font-size: 0.68rem; /* Un poco más pequeña para contraste */
+  opacity: 0.4;
+}
+
+.item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.item-amount { font-size: 0.9rem; }
 .item-amount.ingreso { color: var(--success); font-weight: bold; }
 .item-amount.gasto { color: var(--error); font-weight: bold; }
 
 .delete-btn {
   background: transparent;
   border: none;
-  color: #555;
-  font-size: 1.4rem;
+  color: #444;
+  font-size: 1.2rem;
   cursor: pointer;
-  padding-left: 10px;
+  padding: 0 0 0 5px;
 }
 
 /* ==========================================================================
-   MODALES Y ALERTAS (CENTRADO PROFESIONAL)
+   MODALES Y ALERTAS
    ========================================================================== */
 .toast-overlay {
   position: fixed;
@@ -240,78 +265,40 @@ input {
   justify-content: center;
   align-items: center;
   z-index: 10000;
-  pointer-events: none;
-  background: rgba(0,0,0,0.4); /* Oscurece un poco el fondo */
+  background: rgba(0,0,0,0.6);
+  pointer-events: auto; /* Activado para modales */
 }
 
-/* Caja de alerta (Error, éxito, info) */
-.toast-box {
-  pointer-events: auto;
-  background: rgba(30, 30, 30, 0.98);
-  backdrop-filter: blur(10px);
-  color: white;
-  padding: 20px 30px;
-  border-radius: 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-  animation: toastPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  min-width: 220px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.toast-box.success { border-bottom: 4px solid var(--success); }
-.toast-box.error { border-bottom: 4px solid var(--error); }
-.toast-box.info { border-bottom: 4px solid var(--accent); }
-
-/* Caja de Confirmación (Si/No) */
-.confirm-box {
-  pointer-events: auto;
+.toast-box, .confirm-box {
   background: #1e1e1e;
-  padding: 25px;
-  border-radius: 24px;
-  text-align: center;
+  padding: 20px;
+  border-radius: 20px;
   border: 1px solid #333;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+  text-align: center;
   animation: toastPop 0.3s ease-out;
-  min-width: 280px;
 }
 
 .confirm-btns {
   display: flex;
-  gap: 12px;
-  margin-top: 20px;
+  gap: 10px;
+  margin-top: 15px;
 }
 
-.btn-cancel {
+.btn-cancel, .btn-confirm {
   flex: 1;
-  background: #333;
-  color: white;
+  padding: 10px;
+  border-radius: 10px;
   border: none;
-  padding: 12px;
-  border-radius: 12px;
   cursor: pointer;
-}
-
-.btn-confirm {
-  flex: 1;
-  background: var(--success);
-  color: black;
-  border: none;
-  padding: 12px;
-  border-radius: 12px;
   font-weight: bold;
-  cursor: pointer;
 }
 
-/* ==========================================================================
-   ANIMACIONES Y OTROS
-   ========================================================================== */
+.btn-cancel { background: #333; color: white; }
+.btn-confirm { background: var(--success); color: black; }
+
 @keyframes toastPop {
-  from { opacity: 0; transform: scale(0.7) translateY(30px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .loading-screen {
@@ -320,30 +307,4 @@ input {
   justify-content: center;
   align-items: center;
   color: var(--accent);
-  font-weight: bold;
-}
-/* Contenedor para botones con etiqueta superior */
-.btn-wrapper {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.btn-label {
-  position: absolute;
-  top: -18px; /* Lo sitúa arriba del botón */
-  font-size: 0.65rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  color: var(--accent);
-  white-space: nowrap;
-  letter-spacing: 0.5px;
-  opacity: 0.8;
-}
-
-/* Icono de PDF con color personalizado */
-.icon-pdf {
-  color: #ff4757;
-  font-size: 1.3rem;
 }
