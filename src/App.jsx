@@ -217,37 +217,44 @@ function App() {
   };
 
   const exportarPDF = () => {
-    try {
-        const docPDF = new jsPDF();
-        docPDF.setFontSize(18);
-        docPDF.text("Reporte de Finanzas", 14, 20);
-        
-        // Limpiador rápido de emojis para que el PDF no falle al guardar
-        const limpiar = (t) => t.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
+  // --- BLOQUE DE CONTROL DE ALERTA ---
+  if (!stats.filtrados || stats.filtrados.length === 0) {
+    showToast("No hay datos para exportar en el PDF", "error");
+    return; // Aquí se detiene y no ejecuta el resto
+  }
+  // ------------------------------------
 
-        const rows = stats.filtrados.map((m) => [
-          m.fecha,
-          m.hora || "--:--",
-          limpiar(m.nombre),
-          m.tipo.toUpperCase(),
-          `S/ ${m.monto.toFixed(2)}`
-        ]);
+  try {
+    const docPDF = new jsPDF();
+    docPDF.setFontSize(18);
+    docPDF.text("Reporte de Finanzas", 14, 20);
+    
+    // Limpiador rápido de emojis para que el PDF no falle al guardar
+    const limpiar = (t) => t.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
 
-        autoTable(docPDF, {
-          startY: 30,
-          head: [["Fecha", "Hora", "Detalle", "Tipo", "Monto"]],
-          body: rows,
-          theme: 'grid',
-          headStyles: { fillColor: [0, 209, 178] }
-        });
+    const rows = stats.filtrados.map((m) => [
+      m.fecha,
+      m.hora || "--:--",
+      limpiar(m.nombre),
+      m.tipo.toUpperCase(),
+      `S/ ${m.monto.toFixed(2)}`
+    ]);
 
-        docPDF.save(`reporte_${fechaFiltro}.pdf`);
-        showToast("PDF generado", "success");
-    } catch (err) {
-        console.error("Error detalle PDF:", err);
-        showToast("Error al crear PDF", "error");
-    }
-  };
+    autoTable(docPDF, {
+      startY: 30,
+      head: [["Fecha", "Hora", "Detalle", "Tipo", "Monto"]],
+      body: rows,
+      theme: 'grid',
+      headStyles: { fillColor: [0, 209, 178] }
+    });
+
+    docPDF.save(`reporte_${fechaFiltro}.pdf`);
+    showToast("PDF generado", "success");
+  } catch (err) {
+    console.error("Error detalle PDF:", err);
+    showToast("Error al crear PDF", "error");
+  }
+};
 
   /* =======================
       RENDER
