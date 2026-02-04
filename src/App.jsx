@@ -20,7 +20,6 @@ import {
   setDoc,
 } from "firebase/firestore";
 
-// IMPORTACIÓN CORREGIDA PARA EL PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -32,7 +31,7 @@ function App() {
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
-  const [confirmModal, setConfirmModal] = useState(null); // Nuevo estado para el modal
+  const [confirmModal, setConfirmModal] = useState(null);
 
   const [nombre, setNombre] = useState("");
   const [monto, setMonto] = useState("");
@@ -103,6 +102,7 @@ function App() {
         ...d.data(),
         id: d.id,
       }));
+      // Ordenar por fecha y luego por hora (createdAt)
       setMovimientos(
         data.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
       );
@@ -160,7 +160,6 @@ function App() {
     }
   };
 
-  // Función para manejar cierres con confirmación personalizada
   const triggerConfirm = (message, onConfirm) => {
     setConfirmModal({ message, onConfirm });
   };
@@ -217,27 +216,66 @@ function App() {
   };
 
   const exportarPDF = () => {
-  // --- BLOQUE DE CONTROL DE ALERTA ---
   if (!stats.filtrados || stats.filtrados.length === 0) {
-    showToast("No hay datos para exportar en el PDF", "error");
-    return; // Aquí se detiene y no ejecuta el resto
+    showToast("No hay datos para exportar", "error");
+    return;
   }
-  // ------------------------------------
 
   try {
     const docPDF = new jsPDF();
     docPDF.setFontSize(18);
     docPDF.text("Reporte de Finanzas", 14, 20);
     
-    // Limpiador rápido de emojis para que el PDF no falle al guardar
     const limpiar = (t) => t.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
 
-    const rows = stats.filtrados.map((m) => [
-      m.fecha,
-      m.hora || "--:--",
-      limpiar(m.nombre),
-      m.tipo.toUpperCase(),
-      `S/ ${m.monto.toFixed(2)}`
+    const rows = [];
+    let totalDiaIng = 0;
+    let totalDiaGas = 0;
+    let fechaActual = stats.filtrados[0].fecha;
+
+    stats.filtrados.forEach((m, index) => {
+      // Si cambia la fecha, imprimimos el total acumulado del día anterior
+      if (m.fecha !== fechaActual) {
+        rows.push([
+          { content: `TOTAL DEL DÍA (${fechaActual})`, colSpan: 3, styles: { fillColor: [0, 209, 178], fontStyle: 'bold' } },
+          { content: `ING: S/ ${totalDiaIng.toFixed(2)}`, styles: { fillColor: [0, 209, 178], fontStyle: 'bold' } },
+          { content: `GAS: S/ ${totalDiaGas.toFixed(2)}`, styles: { fillColor: [0, 209, 178], fontStyle: 'bold' } }
+        ]);
+        // Reiniciamos contadores para el nuevo día
+        totalDiaIng = 0;
+        totalDiaGas = 0;
+        fechaActual = m.fecha;
+      }
+
+      // Añadir la fila normal del movimiento
+      rows.push([
+        m.fecha,
+        m.hora || "--:--",
+        limpiar(m.nombre),
+        m.tipo.toUpperCase(),
+        `S/ ${m.monto.toFixed(2)}`
+      ]);
+
+      // Sumar al total del día
+      if (m.tipo === 'ingreso') totalDiaIng += m.monto;
+      else totalDiaGas += m.monto;
+
+      // Si es el último elemento de la lista, imprimir el último total del día
+      if (index === stats.filtrados.length - 1) {
+        rows.push([
+          { content: `TOTAL DEL DÍA (${m.fecha})`, colSpan: 3, styles: { fillColor: [0, 209, 178], fontStyle: 'bold' } },
+          { content: `ING: S/ ${totalDiaIng.toFixed(2)}`, styles: { fillColor: [0, 209, 178], fontStyle: 'bold' } },
+          { content: `GAS: S/ ${totalDiaGas.toFixed(2)}`, styles: { fillColor: [0, 209, 178], fontStyle: 'bold' } }
+        ]);
+      }
+    });
+
+    // FILA FINAL DE TOTAL MENSUAL
+    rows.push([
+      { content: "TOTAL MENSUAL", colSpan: 2, styles: { fillColor: [0, 209, 178], fontStyle: 'bold', textColor: 255 } },
+      { content: `ING: S/ ${stats.ing.toFixed(2)}`, styles: { fillColor: [0, 209, 178], fontStyle: 'bold' } },
+      { content: `GAS: S/ ${stats.gas.toFixed(2)}`, styles: { fillColor: [0, 209, 178], fontStyle: 'bold' } },
+      { content: `ING, NETO: S/ ${stats.bal.toFixed(2)}`, styles: { fillColor: [0, 209, 178], fontStyle: 'bold' } }
     ]);
 
     autoTable(docPDF, {
@@ -245,7 +283,8 @@ function App() {
       head: [["Fecha", "Hora", "Detalle", "Tipo", "Monto"]],
       body: rows,
       theme: 'grid',
-      headStyles: { fillColor: [0, 209, 178] }
+      headStyles: { fillColor: [0, 209, 178] },
+      styles: { fontSize: 9 }
     });
 
     docPDF.save(`reporte_${fechaFiltro}.pdf`);
@@ -261,29 +300,28 @@ function App() {
   ======================= */
   if (loading) return <div className="loading-screen">Sincronizando...</div>;
 
+  // Lógica para separadores de fecha en el historial
+ 
+
   return (
     <div className="main-container">
       <div className="phone-screen">
         <header className="app-header">
-         <div className="header-left">
- <div className="header-left">
- <div className="header-left">
-  <h2>Finanzas CHC</h2>
-  <div className="date-select-container">
-    <span className="date-label">Ver X Dias</span>
-    <div className="date-select-wrapper">
-      <span className="calendar-mini-icon">📅</span> 
-      <input
-        className="mini-date-picker"
-        type={vistaMensual ? "month" : "date"}
-        value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro}
-        onChange={(e) => setFechaFiltro(e.target.value)}
-      />
-    </div>
-  </div>
-</div>
-</div>
-</div>
+          <div className="header-left">
+            <h2>Finanzas CHC</h2>
+            <div className="date-select-container">
+              <span className="date-label">Ver X Dias</span>
+              <div className="date-select-wrapper">
+                <span className="calendar-mini-icon">📅</span> 
+                <input
+                  className="mini-date-picker"
+                  type={vistaMensual ? "month" : "date"}
+                  value={vistaMensual ? fechaFiltro.substring(0, 7) : fechaFiltro}
+                  onChange={(e) => setFechaFiltro(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
 
           <div className="header-btns">
             {!user ? (
@@ -292,25 +330,22 @@ function App() {
               <img src={user.photoURL} alt="u" className="mini-avatar" onClick={handleLogout} />
             )}
             
-            {/* BOTÓN PDF CON ETIQUETA */}
-            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ fontSize: '10px', position: 'absolute', top: '-15px', fontWeight: 'bold' }}>PDF</span>
+            <div className="btn-wrapper">
+              <span className="btn-label">PDF</span>
               <button className="btn-icon" onClick={exportarPDF}>📄</button>
             </div>
 
-            {/* BOTÓN VISTA CON ETIQUETA DINÁMICA */}
-            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-  <span style={{ fontSize: '10px', position: 'absolute', top: '-15px', fontWeight: 'bold', whiteSpace: 'nowrap', color: vistaMensual ? '#bb86fc' : '#00d1b2' }}>
-    {vistaMensual ? "Ver Día" : "Ver Mes"}
-  </span>
-  <button 
-    className={`btn-icon ${vistaMensual ? 'border-mes' : 'border-dia'}`} 
-    onClick={() => setVistaMensual(!vistaMensual)}
-  >
-    {/* Iconos sugeridos: Sol para volver al día, Calendario para ir al mes */}
-    {vistaMensual ? "☀️" : "🗓️"}
-  </button>
-</div>
+            <div className="btn-wrapper">
+              <span className="btn-label" style={{ color: vistaMensual ? '#bb86fc' : '#00d1b2' }}>
+                {vistaMensual ? "Ver Día" : "Ver Mes"}
+              </span>
+              <button 
+                className={`btn-icon ${vistaMensual ? 'border-mes' : 'border-dia'}`} 
+                onClick={() => setVistaMensual(!vistaMensual)}
+              >
+                {vistaMensual ? "☀️" : "🗓️"}
+              </button>
+            </div>
           </div>
         </header>
 
@@ -321,7 +356,6 @@ function App() {
             <div className="inner-circle">
               <div className="chart-info">
                 <p>S/ {stats.bal.toFixed(2)}</p>
-                {/* BALANCE DINÁMICO SEGÚN LA VISTA */}
                 <span>{vistaMensual ? "Balance del mes" : "Balance de hoy"}</span>
               </div>
             </div>
@@ -349,18 +383,38 @@ function App() {
           </div>
         </div>
 
-        <div className="history-list">
-          <input className="search-bar" placeholder="🔍 Buscar..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
-          {stats.filtrados.map((m) => (
-            <div key={m.id} className="history-item">
-              <div className="item-info"><strong>{m.nombre}</strong><span>{m.hora}</span></div>
-              <div className="item-right">
-                <span className={`item-amount ${m.tipo}`}>{m.tipo === 'gasto' ? '-' : '+'} S/ {m.monto.toFixed(2)}</span>
-                <button className="delete-btn" onClick={() => triggerConfirm("¿Eliminar este movimiento?", () => deleteDoc(doc(db, "movimientos", m.id)))}>×</button>
-              </div>
+       <div className="history-list">
+  <input className="search-bar" placeholder="🔍 Buscar..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+  
+  {stats.filtrados.map((m, index) => {
+    // Lógica corregida: Comparamos con el elemento anterior del array directamente
+    const mostrarSeparador = index === 0 || m.fecha !== stats.filtrados[index - 1].fecha;
+
+    return (
+      <React.Fragment key={m.id}>
+        {mostrarSeparador && (
+          <div className="date-separator">
+            {new Date(m.fecha + "T00:00:00").toLocaleDateString("es-ES", { weekday: 'long', day: 'numeric', month: 'long' })}
+          </div>
+        )}
+        <div className="history-item">
+          <div className="item-info">
+            <strong>{m.nombre}</strong>
+            <div className="item-time-group">
+               {/* Aquí la fecha y hora estarán una al lado de la otra */}
+               <span className="item-date-small">{m.fecha.split('-').slice(1).reverse().join('/')}</span>
+               <span className="item-time">{m.hora}</span>
             </div>
-          ))}
+          </div>
+          <div className="item-right">
+            <span className={`item-amount ${m.tipo}`}>{m.tipo === 'gasto' ? '-' : '+'} S/ {m.monto.toFixed(2)}</span>
+            <button className="delete-btn" onClick={() => triggerConfirm("¿Eliminar este movimiento?", () => deleteDoc(doc(db, "movimientos", m.id)))}>×</button>
+          </div>
         </div>
+      </React.Fragment>
+    );
+  })}
+</div>
       </div>
 
       {/* MODAL DE CONFIRMACIÓN PERSONALIZADO */}

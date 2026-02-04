@@ -438,3 +438,40 @@ input[type="month"].mini-date-picker {
   text-overflow: ellipsis;
   max-width: 150px; /* Evita que rompa el círculo */
 }
+
+/* SEPARADORES DE FECHA EN EL HISTORIAL */
+.date-separator {
+  padding: 10px 5px 5px 5px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: var(--accent);
+  text-transform: capitalize;
+  border-bottom: 1px solid #222;
+  margin-bottom: 8px;
+  margin-top: 10px;
+}
+.item-time-group {
+  display: flex;
+  flex-direction: row; /* Cambiado de column a row */
+  align-items: center;
+  gap: 8px; /* Espacio entre fecha y hora */
+}
+
+.item-date-small {
+  font-size: 0.7rem;
+  color: var(--success);
+  opacity: 0.9;
+  font-weight: bold;
+}
+
+.item-time {
+  font-size: 0.7rem;
+  opacity: 0.5;
+}
+
+/* Ajuste opcional para que el nombre tenga su espacio */
+.item-info {
+  display: flex;
+  align-items: center;
+  gap: 15px !important;
+}
