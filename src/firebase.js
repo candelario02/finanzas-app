@@ -1,6 +1,10 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager 
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC3IiIKb77nAe6LEJ_yXPiXk_poUOmBFqo",
@@ -14,8 +18,13 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Exportaciones claras para App.jsx
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager() 
+  })
+});
+
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-export const db = getFirestore(app);
+export { db }; 
 export default app;

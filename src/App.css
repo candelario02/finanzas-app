@@ -1,5 +1,5 @@
 /* ==========================================================================
-   VARIABLES Y BASE
+   VARIABLES Y CONFIGURACIÓN BASE
    ========================================================================== */
 :root {
   --bg-dark: #000000;
@@ -8,6 +8,8 @@
   --success: #00d1b2;
   --error: #ff4757;
   --text: #ffffff;
+  --input-bg: #1a1a1a;
+  --border: rgba(255, 255, 255, 0.1);
 }
 
 html, body, #root {
@@ -49,10 +51,63 @@ html, body, #root {
   align-items: center;
 }
 
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.header-left h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
 .header-btns {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.date-select-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.date-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.date-select-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  width: fit-content;
+}
+
+.mini-date-picker {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: bold;
+  outline: none;
+  width: 110px;
+}
+
+.mini-date-picker::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0;
+  position: absolute;
+  width: 100%;
 }
 
 .mini-avatar {
@@ -60,46 +115,12 @@ html, body, #root {
   height: 34px;
   border-radius: 50%;
   border: 2px solid var(--accent);
-  cursor: pointer;
   object-fit: cover;
-}
-
-.btn-icon {
-  background: #1a1a1a;
-  border: none;
-  padding: 8px;
-  border-radius: 10px;
-  font-size: 1.2rem;
   cursor: pointer;
-}
-
-.btn-wrapper {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.btn-label {
-  position: absolute;
-  top: -16px;
-  font-size: 0.6rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  color: var(--accent);
-  white-space: nowrap;
-}
-
-.mini-date-picker {
-  background: transparent;
-  border: none;
-  color: var(--accent);
-  font-size: 0.9rem;
-  font-weight: bold;
 }
 
 /* ==========================================================================
-   DASHBOARD
+   DASHBOARD CARD
    ========================================================================== */
 .main-card {
   background: var(--card-dark);
@@ -108,7 +129,7 @@ html, body, #root {
   text-align: center;
 }
 
-.circle-chart-multi {
+.circle-chart {
   width: 200px;
   height: 200px;
   border-radius: 50%;
@@ -116,6 +137,7 @@ html, body, #root {
   display: flex;
   justify-content: center;
   align-items: center;
+  transition: background 0.5s ease;
 }
 
 .inner-circle {
@@ -132,6 +154,9 @@ html, body, #root {
   margin: 0;
   font-size: 1.6rem;
   font-weight: bold;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chart-info span {
@@ -147,29 +172,12 @@ html, body, #root {
   padding-top: 15px;
 }
 
-.stat span { 
-  font-size: 0.75rem; 
-  opacity: 0.7; 
-  display: block;
-  margin-bottom: 4px;
-}
-.stat p { 
-  margin: 0; 
-  font-weight: bold; 
-  font-size: 0.9rem; 
-}
-.stat:nth-child(1) p { 
-  color: #ff4757; 
-}
-.stat:nth-child(2) p { 
-  color: #00d1b2; 
-}
-.stat:nth-child(3) p { 
-  color: #a29bfe; 
-}
+.stat span { font-size: 0.75rem; opacity: 0.7; display: block; margin-bottom: 4px; }
+.stat p { margin: 0; font-weight: bold; font-size: 0.9rem; }
+.txt-gasto { color: var(--error); }
 
 /* ==========================================================================
-   INPUTS
+   INPUTS Y BOTONES
    ========================================================================== */
 .input-section {
   background: var(--card-dark);
@@ -185,7 +193,7 @@ input, .search-bar {
   padding: 12px;
   border-radius: 12px;
   border: 1px solid #333;
-  background: #1a1a1a;
+  background: var(--input-bg);
   color: white;
   box-sizing: border-box;
 }
@@ -203,16 +211,23 @@ input, .search-bar {
   border: 1px solid #333;
   background: #222;
   color: white;
-  cursor: pointer;
   font-size: 0.85rem;
+  cursor: pointer;
 }
 
-.btn-group-direct {
+.tag-btn-edit {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.btn-group-main {
   display: flex;
   gap: 10px;
 }
 
-.btn-direct {
+.btn-action {
   flex: 1;
   padding: 14px;
   border-radius: 14px;
@@ -221,257 +236,116 @@ input, .search-bar {
   cursor: pointer;
 }
 
-.btn-direct.in { background: var(--success); color: black; }
-.btn-direct.out { background: var(--error); color: white; }
+.btn-action.in { background: var(--success); color: black; }
+.btn-action.out { background: var(--error); color: white; }
 
 /* ==========================================================================
-   HISTORIAL (FILAS PEQUEÑAS Y SEPARADAS)
+   HISTORIAL
    ========================================================================== */
-.history-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* Empuja el monto a la derecha */
-  background: var(--card-dark);
-  padding: 6px 14px; /* Fila súper delgada */
-  border-radius: 12px;
-  margin-bottom: 6px;
-}
-
-.item-info {
-  flex: 1;
-  display: flex;
-  flex-direction: row; /* Alineación horizontal */
-  align-items: center; /* Centrado vertical */
-  gap: 20px; /* AQUÍ AJUSTAS LA SEPARACIÓN: más espacio entre nombre y hora */
-}
-
-.item-info strong {
-  font-size: 0.85rem;
-  min-width: 80px; /* Asegura que los nombres cortos no muevan la hora */
-}
-
-.item-info span {
-  font-size: 0.7rem;
-  opacity: 0.5;
-  font-weight: normal;
-}
-
-.item-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.item-amount { font-size: 0.9rem; }
-.item-amount.ingreso { color: var(--success); font-weight: bold; }
-.item-amount.gasto { color: var(--error); font-weight: bold; }
-
-.delete-btn {
-  background: transparent;
-  border: none;
-  color: #444;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 0 0 0 5px;
-}
-
-/* ==========================================================================
-   MODALES Y ALERTAS
-   ========================================================================== */
-.toast-overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100vw; height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 10000;
-  background: rgba(0,0,0,0.6);
-  pointer-events: auto; /* Activado para modales */
-}
-
-.toast-box, .confirm-box {
-  background: #1e1e1e;
-  padding: 20px;
-  border-radius: 20px;
-  border: 1px solid #333;
-  text-align: center;
-  animation: toastPop 0.3s ease-out;
-}
-
-.confirm-btns {
-  display: flex;
-  gap: 10px;
-  margin-top: 15px;
-}
-
-.btn-cancel, .btn-confirm {
-  flex: 1;
-  padding: 10px;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.btn-cancel { background: #333; color: white; }
-.btn-confirm { background: var(--success); color: black; }
-
-@keyframes toastPop {
-  from { opacity: 0; transform: scale(0.8); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.loading-screen {
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: var(--accent);
-}
-/* Borde cuando estás en Vista Mensual (Color Morado) */
-.border-mes {
-  border: 2px solid #bb86fc !important;
-  background: rgba(187, 134, 252, 0.1) !important;
-  transition: all 0.3s ease;
-}
-
-/* Borde cuando estás en Vista Diaria (Color Verde) */
-.border-dia {
-  border: 2px solid #00d1b2 !important;
-  background: rgba(0, 209, 178, 0.1) !important;
-  transition: all 0.3s ease;
-}
-
-/* Ajuste para que el botón no se vea cuadrado */
-.btn-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-}
-.date-select-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: rgba(255, 255, 255, 0.08); /* Un fondo sutil para saber dónde tocar */
-  padding: 4px 8px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.mini-date-picker {
-  background: transparent;
-  border: none;
-  color: var(--accent); /* Tu color morado */
-  font-size: 0.9rem;
-  font-weight: bold;
-  cursor: pointer;
-  outline: none;
-  font-family: inherit;
-}
-
-/* Esto quita el icono feo que pone el navegador por defecto y deja el tuyo */
-.mini-date-picker::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  padding: 5px;
-  filter: invert(1); /* Lo hace blanco si es necesario */
-  opacity: 0; /* Lo ocultamos para que solo se vea tu emoji 📅 */
-  position: absolute;
-  right: 0;
-  width: 100%;
-}
-
-.calendar-mini-icon {
-  font-size: 1rem;
-  pointer-events: none; /* Hace que el clic pase a través del emoji al input */
-}
-
-.date-select-container {
+.history-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
-.date-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  color: var(--accent);
-  opacity: 0.8;
-  font-weight: bold;
-  letter-spacing: 0.5px;
-}
-
-.date-select-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 6px 10px;
-  border-radius: 10px;
-  cursor: pointer;
-  width: fit-content; /* ESTO HACE QUE NO SEA LARGO */
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.mini-date-picker {
-  background: transparent;
-  border: none;
-  color: white;
-  font-size: 0.9rem;
-  font-weight: bold;
-  cursor: pointer;
-  outline: none;
-  width: 110px; /* Ancho fijo para que no se estire */
-}
-
-/* Para la vista de MES el input necesita un poco más de espacio */
-input[type="month"].mini-date-picker {
-  width: 130px;
-}
-.chart-info p {
-  margin: 0;
-  font-size: 1.6rem; /* Bajamos un poco de 1.8 para dar margen */
-  font-weight: bold;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 150px; /* Evita que rompa el círculo */
-}
-
-/* SEPARADORES DE FECHA EN EL HISTORIAL */
 .date-separator {
-  padding: 10px 5px 5px 5px;
+  padding: 15px 5px 5px 5px;
   font-size: 0.75rem;
   font-weight: bold;
   color: var(--accent);
   text-transform: capitalize;
   border-bottom: 1px solid #222;
-  margin-bottom: 8px;
-  margin-top: 10px;
 }
-.item-time-group {
+
+.history-item {
   display: flex;
-  flex-direction: row; /* Cambiado de column a row */
   align-items: center;
-  gap: 8px; /* Espacio entre fecha y hora */
+  justify-content: space-between;
+  background: var(--card-dark);
+  padding: 8px 14px;
+  border-radius: 12px;
+  margin-top: 6px;
 }
 
-.item-date-small {
-  font-size: 0.7rem;
-  color: var(--success);
-  opacity: 0.9;
-  font-weight: bold;
-}
-
-.item-time {
-  font-size: 0.7rem;
-  opacity: 0.5;
-}
-
-/* Ajuste opcional para que el nombre tenga su espacio */
 .item-info {
   display: flex;
   align-items: center;
-  gap: 15px !important;
+  gap: 15px;
 }
+
+.item-meta {
+  display: flex;
+  gap: 8px;
+}
+
+.meta-date { font-size: 0.7rem; color: var(--success); font-weight: bold; }
+.meta-time { font-size: 0.7rem; opacity: 0.5; }
+
+.item-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.item-amount { font-size: 0.9rem; font-weight: bold; }
+.item-amount.ingreso { color: var(--success); }
+.item-amount.gasto { color: var(--error); }
+
+.btn-delete {
+  background: transparent;
+  border: none;
+  color: #444;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   MODALES Y UTILIDADES
+   ========================================================================== */
+.overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.confirm-box, .toast-box {
+  background: #1e1e1e;
+  padding: 20px;
+  border-radius: 20px;
+  border: 1px solid #333;
+  text-align: center;
+  min-width: 250px;
+}
+
+.confirm-btns { display: flex; gap: 10px; margin-top: 15px; }
+.btn-c, .btn-a { flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
+.btn-c { background: #333; color: white; }
+.btn-a { background: var(--success); color: black; }
+
+.toast-box.success { border-color: var(--success); }
+.toast-box.error { border-color: var(--error); }
+
+.btn-icon {
+  background: #1a1a1a;
+  border: none;
+  padding: 8px;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.border-mes { border: 2px solid var(--accent) !important; background: rgba(187, 134, 252, 0.1) !important; }
+.border-dia { border: 2px solid var(--success) !important; background: rgba(0, 209, 178, 0.1) !important; }
+
+.btn-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; }
+.btn-label { position: absolute; top: -16px; font-size: 0.6rem; font-weight: bold; color: var(--accent); }
+
+.loading-screen { height: 100vh; display: flex; justify-content: center; align-items: center; color: var(--accent); }
