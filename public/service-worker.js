@@ -1,9 +1,12 @@
-const CACHE_NAME = "finanzas-chc-v1";
+const CACHE_NAME = "finanzas-chc-v2";
 const assets = [
   "/",
   "/index.html",
   "/manifest.json",
-  "/finanza.png"
+  "/finanzasJEC.png",
+  "/src/main.jsx", 
+  "/src/App.jsx",
+  "/src/App.css"
 ];
 
 self.addEventListener("install", (e) => {
@@ -12,12 +15,22 @@ self.addEventListener("install", (e) => {
       return cache.addAll(assets);
     })
   );
+  self.skipWaiting(); 
 });
 
 self.addEventListener("fetch", (e) => {
   e.respondWith(
     caches.match(e.request).then((res) => {
-      return res || fetch(e.request);
+      return res || fetch(e.request).then((fetchRes) => {
+        return caches.open(CACHE_NAME).then((cache) => {
+          cache.put(e.request.url, fetchRes.clone());
+          return fetchRes;
+        });
+      });
+    }).catch(() => {
+      if (e.request.mode === 'navigate') {
+        return caches.match('/index.html');
+      }
     })
   );
 });
