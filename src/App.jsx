@@ -16,7 +16,6 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-
 function App() {
   /* =======================
       ESTADOS Y LÓGICA (Mantenida intacta)
@@ -138,25 +137,29 @@ function App() {
       showToast("Completa los campos", "error");
       return;
     }
+
+    const nuevoMovimiento = {
+      uid: user.uid,
+      nombre: nombre.trim(),
+      monto: parseFloat(monto),
+      tipo,
+      fecha: new Date().toLocaleDateString("en-CA"),
+      hora: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      createdAt: Date.now(),
+    };
+
+    setNombre("");
+    setMonto("");
+    showToast("¡Movimiento guardado localmente! 📲", "success");
+
     try {
-      await addDoc(collection(db, "movimientos"), {
-        uid: user.uid,
-        nombre: nombre.trim(),
-        monto: parseFloat(monto),
-        tipo,
-        fecha: new Date().toLocaleDateString("en-CA"),
-        hora: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        createdAt: Date.now(),
-      });
-      setNombre("");
-      setMonto("");
-      showToast("¡Movimiento guardado!", "success");
+      await addDoc(collection(db, "movimientos"), nuevoMovimiento);
     } catch (err) {
-      console.error("Error al guardar movimiento:", err);
-      showToast("No se pudo guardar el dato", "error");
+      console.error("Error al guardar:", err);
+
     }
   };
 
