@@ -16,13 +16,14 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+
 function App() {
   /* =======================
       ESTADOS Y LÓGICA (Mantenida intacta)
   ======================= */
   const [user, setUser] = useState(null);
   const [movimientos, setMovimientos] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
   const [confirmModal, setConfirmModal] = useState(null);
   const [nombre, setNombre] = useState("");
@@ -112,8 +113,16 @@ function App() {
   const handleLogin = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch {
-      showToast("Error al iniciar sesión", "error");
+    } catch (err) {
+      console.error("Error detallado de Firebase:", err.code, err.message);
+
+      if (err.code === "auth/popup-closed-by-user") {
+        showToast("Inicio de sesión cancelado", "info");
+      } else if (err.code === "auth/cancelled-popup-request") {
+        showToast("Ya hay una ventana de login abierta", "info");
+      } else {
+        showToast("Error de conexión con Google", "error");
+      }
     }
   };
   const triggerConfirm = (message, onConfirm) =>
@@ -146,8 +155,8 @@ function App() {
       setMonto("");
       showToast("¡Movimiento guardado!", "success");
     } catch (err) {
-      console.error("Error detallado:", err); // Esto quita el aviso de ESLint
-      showToast("Error al iniciar sesión", "error");
+      console.error("Error al guardar movimiento:", err);
+      showToast("No se pudo guardar el dato", "error");
     }
   };
 
