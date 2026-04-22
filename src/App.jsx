@@ -20,6 +20,7 @@ function App() {
   /* =======================
       ESTADOS Y LÓGICA (Mantenida intacta)
   ======================= */
+  const isFirstLoad = React.useRef(true);
   const [user, setUser] = useState(null);
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -49,17 +50,25 @@ function App() {
       if (u) {
         setUser(u);
         const nickname = u.displayName || u.email.split("@")[0];
-        showToast(`¡Bienvenido, ${nickname}! 👋`, "success");
+
+        if (isFirstLoad.current) {
+          showToast(`¡Bienvenido, ${nickname}! 👋`, "success");
+          isFirstLoad.current = false;
+        }
+
         try {
           const ref = doc(db, "config_usuarios", u.uid);
           const snap = await getDoc(ref);
-          if (snap.exists()) setTags(snap.data().tags);
+          if (snap.exists()) {
+            setTags(snap.data().tags);
+          }
         } catch (err) {
           console.error("Error al cargar tags:", err);
         }
       } else {
         setUser(null);
         setMovimientos([]);
+        isFirstLoad.current = true;
       }
       setLoading(false);
     });
@@ -153,14 +162,19 @@ function App() {
 
     setNombre("");
     setMonto("");
-    showToast("¡Movimiento guardado localmente! 📲", "success");
 
-    try {
-      await addDoc(collection(db, "movimientos"), nuevoMovimiento);
-    } catch (err) {
-      console.error("Error al guardar:", err);
+    showToast(
+      "¡Movimiento anotado! (Se sincronizará al haber señal) 📲",
+      "success",
+    );
 
-    }
+    addDoc(collection(db, "movimientos"), nuevoMovimiento)
+      .then(() => {
+        console.log("Sincronizado con la nube ✅");
+      })
+      .catch((err) => {
+        console.error("Error silencioso (se reintentará):", err);
+      });
   };
 
   const editarTags = async () => {
