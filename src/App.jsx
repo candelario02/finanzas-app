@@ -49,12 +49,13 @@ function App() {
       if (u) {
         setUser(u);
         const nickname = u.displayName || u.email.split("@")[0];
-        const yaSaludado = sessionStorage.getItem("saludo_realizado");
+        const yaSaludado = localStorage.getItem("saludo_realizado");
 
         if (!yaSaludado) {
-          showToast(`¡Bienvenido de vuelta, ${nickname}! 👋`, "success");
-          sessionStorage.setItem("saludo_realizado", "true");
+          showToast(`¡Bienvenido, ${nickname}! 👋`, "success");
+          localStorage.setItem("saludo_realizado", "true");
         }
+
         try {
           const ref = doc(db, "config_usuarios", u.uid);
           const snap = await getDoc(ref);
@@ -67,7 +68,7 @@ function App() {
       } else {
         setUser(null);
         setMovimientos([]);
-        sessionStorage.removeItem("saludo_realizado");
+        localStorage.removeItem("saludo_realizado");
       }
       setLoading(false);
     });
