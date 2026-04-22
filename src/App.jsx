@@ -164,7 +164,7 @@ function App() {
     setMonto("");
 
     showToast(
-      "¡Movimiento anotado! (Se sincronizará al haber señal) 📲",
+      "¡Movimiento anotado! ",
       "success",
     );
 
