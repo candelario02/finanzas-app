@@ -20,7 +20,6 @@ function App() {
   /* =======================
       ESTADOS Y LÓGICA (Mantenida intacta)
   ======================= */
-  const isFirstLoad = React.useRef(true);
   const [user, setUser] = useState(null);
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -50,12 +49,12 @@ function App() {
       if (u) {
         setUser(u);
         const nickname = u.displayName || u.email.split("@")[0];
+        const yaSaludado = sessionStorage.getItem("saludo_realizado");
 
-        if (isFirstLoad.current) {
-          showToast(`¡Bienvenido, ${nickname}! 👋`, "success");
-          isFirstLoad.current = false;
+        if (!yaSaludado) {
+          showToast(`¡Bienvenido de vuelta, ${nickname}! 👋`, "success");
+          sessionStorage.setItem("saludo_realizado", "true");
         }
-
         try {
           const ref = doc(db, "config_usuarios", u.uid);
           const snap = await getDoc(ref);
@@ -68,7 +67,7 @@ function App() {
       } else {
         setUser(null);
         setMovimientos([]);
-        isFirstLoad.current = true;
+        sessionStorage.removeItem("saludo_realizado");
       }
       setLoading(false);
     });
