@@ -163,10 +163,11 @@ function App() {
     setNombre("");
     setMonto("");
 
-    showToast(
-      "¡Movimiento anotado! ",
-      "success",
-    );
+    if (navigator.onLine) {
+      showToast("¡Movimiento registrado! 🚀", "success");
+    } else {
+      showToast("Guardado localmente (sin internet) 💾", "info");
+    }
 
     addDoc(collection(db, "movimientos"), nuevoMovimiento)
       .then(() => {
