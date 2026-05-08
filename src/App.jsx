@@ -286,7 +286,7 @@ function App() {
   return (
     <div className="main-container">
       <div className="phone-screen">
-        {/* HEADER */}
+        {/* SESION HEADER */}
         <header className="app-header">
           <div className="header-left">
             <h2>Finanzas CHC</h2>
@@ -344,7 +344,7 @@ function App() {
           </div>
         </header>
 
-        {/* DASHBOARD CARD */}
+        {/* SESION DASHBOARD CARD */}
         <div className="main-card">
           <div
             className="circle-chart"
@@ -424,7 +424,7 @@ function App() {
           </div>
         </div>
 
-        {/* HISTORIAL */}
+        {/* SESION HISTORIAL */}
         <div className="history-list">
           <input
             className="search-bar"
@@ -478,7 +478,7 @@ function App() {
         </div>
       </div>
 
-      {/* COMPONENTES FLOTANTES (Modales y Toasts) */}
+      {/*SESION COMPONENTES FLOTANTES (Modales y Toasts) */}
       {confirmModal && (
         <div className="overlay">
           <div className="confirm-box">

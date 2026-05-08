@@ -24,7 +24,7 @@ html, body, #root {
 }
 
 /* ==========================================================================
-   LAYOUT
+   SESION PRINCIPAL
    ========================================================================== */
 .main-container {
   min-height: 100vh;
@@ -32,18 +32,8 @@ html, body, #root {
   justify-content: center;
 }
 
-.phone-screen {
-  width: 100%;
-  max-width: 380px;
-  min-height: 100vh;
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
 /* ==========================================================================
-   HEADER
+   SESION HEADER 
    ========================================================================== */
 .app-header {
   display: flex;
@@ -118,6 +108,17 @@ html, body, #root {
   object-fit: cover;
   cursor: pointer;
 }
+.btn-icon {
+  background: #1a1a1a;
+  border: none;
+  padding: 8px;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 /* ==========================================================================
    DASHBOARD CARD
@@ -177,7 +178,7 @@ html, body, #root {
 .txt-gasto { color: var(--error); }
 
 /* ==========================================================================
-   INPUTS Y BOTONES
+   SESION DE FORMULARIO REGISTRO
    ========================================================================== */
 .input-section {
   background: var(--card-dark);
@@ -240,7 +241,7 @@ input, .search-bar {
 .btn-action.out { background: var(--error); color: white; }
 
 /* ==========================================================================
-   HISTORIAL
+   SESION HISTORIAL
    ========================================================================== */
 .history-list {
   display: flex;
@@ -300,7 +301,7 @@ input, .search-bar {
 }
 
 /* ==========================================================================
-   MODALES Y UTILIDADES
+   SESION COMPONENTES FLOTANTES (Modales y Toasts) 
    ========================================================================== */
 .overlay {
   position: fixed;
@@ -330,17 +331,6 @@ input, .search-bar {
 .toast-box.success { border-color: var(--success); }
 .toast-box.error { border-color: var(--error); }
 
-.btn-icon {
-  background: #1a1a1a;
-  border: none;
-  padding: 8px;
-  border-radius: 10px;
-  font-size: 1.1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
 .border-mes { border: 2px solid var(--accent) !important; background: rgba(187, 134, 252, 0.1) !important; }
 .border-dia { border: 2px solid var(--success) !important; background: rgba(0, 209, 178, 0.1) !important; }
@@ -349,3 +339,17 @@ input, .search-bar {
 .btn-label { position: absolute; top: -16px; font-size: 0.6rem; font-weight: bold; color: var(--accent); }
 
 .loading-screen { height: 100vh; display: flex; justify-content: center; align-items: center; color: var(--accent); }
+
+/* ==========================================================================
+   SESION PARA VER EN CELULAR
+   ========================================================================== */
+
+.phone-screen {
+  width: 100%;
+  max-width: 380px;
+  min-height: 100vh;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
