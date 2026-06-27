@@ -1,5 +1,5 @@
 /* ==========================================================================
-   VARIABLES Y CONFIGURACIÓN BASE
+   VARIABLES Y CONFIGURACION BASE
    ========================================================================== */
 :root {
   --bg-dark: #000000;
@@ -23,6 +23,10 @@ html, body, #root {
   overflow-x: hidden;
 }
 
+button {
+  font-family: inherit;
+}
+
 /* ==========================================================================
    SESION PRINCIPAL
    ========================================================================== */
@@ -33,12 +37,12 @@ html, body, #root {
 }
 
 /* ==========================================================================
-   SESION HEADER 
+   SESION HEADER
    ========================================================================== */
 .app-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .header-left {
@@ -55,7 +59,7 @@ html, body, #root {
 .header-btns {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .date-select-container {
@@ -75,22 +79,30 @@ html, body, #root {
 .date-select-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: rgba(255, 255, 255, 0.08);
-  padding: 6px 10px;
+  padding: 5px 8px;
   border-radius: 10px;
   border: 1px solid var(--border);
   width: fit-content;
+}
+
+.calendar-mini-icon {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .mini-date-picker {
   background: transparent;
   border: none;
   color: white;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: bold;
   outline: none;
   width: 110px;
+  padding: 2px 0;
 }
 
 .mini-date-picker::-webkit-calendar-picker-indicator {
@@ -108,6 +120,7 @@ html, body, #root {
   object-fit: cover;
   cursor: pointer;
 }
+
 .btn-icon {
   background: #1a1a1a;
   border: none;
@@ -189,7 +202,7 @@ html, body, #root {
   gap: 12px;
 }
 
-input, .search-bar {
+input {
   width: 100%;
   padding: 12px;
   border-radius: 12px;
@@ -235,6 +248,7 @@ input, .search-bar {
   border: none;
   font-weight: bold;
   cursor: pointer;
+  font-size: 0.95rem;
 }
 
 .btn-action.in { background: var(--success); color: black; }
@@ -263,7 +277,7 @@ input, .search-bar {
   align-items: center;
   justify-content: space-between;
   background: var(--card-dark);
-  padding: 8px 14px;
+  padding: 10px 14px;
   border-radius: 12px;
   margin-top: 6px;
 }
@@ -272,6 +286,15 @@ input, .search-bar {
   display: flex;
   align-items: center;
   gap: 15px;
+  min-width: 0;
+  flex: 1;
+}
+
+.item-info strong {
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .item-meta {
@@ -285,23 +308,31 @@ input, .search-bar {
 .item-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: 10px;
 }
 
-.item-amount { font-size: 0.9rem; font-weight: bold; }
+.item-amount { font-size: 0.9rem; font-weight: bold; white-space: nowrap; }
 .item-amount.ingreso { color: var(--success); }
 .item-amount.gasto { color: var(--error); }
 
 .btn-delete {
   background: transparent;
   border: none;
-  color: #444;
+  color: #666;
   font-size: 1.2rem;
   cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.btn-delete:hover {
+  color: var(--error);
 }
 
 /* ==========================================================================
-   SESION COMPONENTES FLOTANTES (Modales y Toasts) 
+   SESION COMPONENTES FLOTANTES (Modales y Toasts)
    ========================================================================== */
 .overlay {
   position: fixed;
@@ -320,7 +351,7 @@ input, .search-bar {
   to { opacity: 1; }
 }
 
-.confirm-box, .toast-box {
+.confirm-box {
   background: #1e1e1e;
   padding: 20px;
   border-radius: 20px;
@@ -334,6 +365,32 @@ input, .search-bar {
 .btn-c { background: #333; color: white; }
 .btn-a { background: var(--success); color: black; }
 
+.icon-q {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.toast-overlay {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.toast-box {
+  background: #1e1e1e;
+  padding: 12px 20px;
+  border-radius: 14px;
+  border: 1px solid #333;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
 .toast-box.success { border-color: var(--success); }
 .toast-box.error { border-color: var(--error); }
 .toast-box.info { border-color: var(--accent); }
@@ -342,7 +399,9 @@ input, .search-bar {
   font-size: 0.85rem;
 }
 
-
+/* ==========================================================================
+   BOTONES DEL HEADER
+   ========================================================================== */
 .border-mes { border: 2px solid var(--accent) !important; background: rgba(187, 134, 252, 0.1) !important; }
 .border-dia { border: 2px solid var(--success) !important; background: rgba(0, 209, 178, 0.1) !important; }
 
@@ -386,24 +445,9 @@ input, .search-bar {
   font-size: 0.9rem;
 }
 
-.toast-overlay {
-  position: fixed;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  pointer-events: none;
-}
-
-.icon-q {
-  font-size: 2rem;
-  margin-bottom: 10px;
-}
-
 /* ==========================================================================
-   SESION PARA VER EN CELULAR
+   PHONE SCREEN - CONTENEDOR PRINCIPAL
    ========================================================================== */
-
 .phone-screen {
   width: 100%;
   max-width: 380px;
@@ -412,4 +456,117 @@ input, .search-bar {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  box-sizing: border-box;
+}
+
+/* ==========================================================================
+   RESPONSIVE - CELULARES PEQUENOS (<360px)
+   ========================================================================== */
+@media (max-width: 360px) {
+  .phone-screen {
+    padding: 10px;
+    gap: 12px;
+  }
+
+  .app-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .header-btns {
+    gap: 8px;
+  }
+
+  .header-left h2 {
+    font-size: 1.05rem;
+  }
+
+  .main-card {
+    padding: 20px 12px;
+    border-radius: 24px;
+  }
+
+  .circle-chart {
+    width: 170px;
+    height: 170px;
+  }
+
+  .inner-circle {
+    width: 140px;
+    height: 140px;
+  }
+
+  .chart-info p {
+    font-size: 1.3rem;
+  }
+
+  .input-section {
+    padding: 15px;
+    border-radius: 20px;
+  }
+
+  .btn-action {
+    padding: 12px;
+    font-size: 0.85rem;
+  }
+
+  .tag-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  .history-item {
+    padding: 8px 10px;
+  }
+
+  .item-info strong {
+    font-size: 0.85rem;
+  }
+
+  .item-amount {
+    font-size: 0.8rem;
+  }
+
+  .btn-label {
+    font-size: 0.55rem;
+    top: -14px;
+  }
+
+  .btn-icon {
+    padding: 6px;
+    font-size: 1rem;
+  }
+
+  .mini-avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  .date-select-wrapper {
+    padding: 4px 6px;
+  }
+
+  .mini-date-picker {
+    width: 95px;
+    font-size: 0.8rem;
+  }
+
+  .confirm-box {
+    min-width: 220px;
+    margin: 0 15px;
+  }
+
+  .toast-box {
+    padding: 10px 16px;
+    font-size: 0.8rem;
+  }
+}
+
+/* ==========================================================================
+   RESPONSIVE - PANTALLAS medianas (tablet landscape, etc.)
+   ========================================================================== */
+@media (min-width: 361px) and (max-width: 480px) {
+  .phone-screen {
+    padding: 12px;
+  }
 }
