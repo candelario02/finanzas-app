@@ -1,6 +1,5 @@
-const CACHE_NAME = "finanzas-chc-v3";
+const CACHE_NAME = "finanzas-chc-v4";
 
-// 1. Instalación: Solo guardamos lo básico que NO cambia
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -8,14 +7,13 @@ self.addEventListener("install", (e) => {
         "/",
         "/index.html",
         "/manifest.json",
-        "/finanzasJEC.png"
+        "/finanzasJEC.png",
       ]);
     })
   );
   self.skipWaiting();
 });
 
-// 2. Activación: Borramos cachés viejos para que no haya conflictos
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys().then((keys) => {
@@ -26,28 +24,44 @@ self.addEventListener("activate", (e) => {
       );
     })
   );
+  self.clients.claim();
 });
 
-// 3. Intercepción: Si no hay red, usa el caché. Si hay red, guarda una copia.
 self.addEventListener("fetch", (e) => {
+  const url = new URL(e.request.url);
+
+  if (url.hostname.includes("firebaseio.com") || url.hostname.includes("googleapis.com") || url.hostname.includes("google.com")) {
+    e.respondWith(
+      fetch(e.request).catch(() => {
+        return new Response(JSON.stringify({ error: "Sin conexion" }), {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        });
+      })
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
-
-      return fetch(e.request).then((networkResponse) => {
-        return caches.open(CACHE_NAME).then((cache) => {
-          // Solo guardamos archivos de nuestro propio dominio (Vercel)
-          if (e.request.url.startsWith(self.location.origin)) {
-            cache.put(e.request, networkResponse.clone());
+      const fetchPromise = fetch(e.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(e.request, responseClone);
+            });
           }
           return networkResponse;
+        })
+        .catch(() => {
+          if (e.request.mode === "navigate") {
+            return caches.match("/index.html");
+          }
+          return cachedResponse;
         });
-      }).catch(() => {
-        // Si no hay red y no está en caché, devolvemos el index.html
-        if (e.request.mode === 'navigate') {
-          return caches.match('/index.html');
-        }
-      });
+
+      return cachedResponse || fetchPromise;
     })
   );
 });

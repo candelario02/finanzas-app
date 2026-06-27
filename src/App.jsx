@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import "./App.css";
 import { db, auth, googleProvider } from "./firebase";
 import { signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
@@ -16,64 +16,63 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+const DEFAULT_TAGS = ["GNV ⛽", "Comida 🍔", "Diversión 🎮", "Generé 💰"];
+
 function App() {
-  /* =======================
-      ESTADOS Y LÓGICA (Mantenida intacta)
-  ======================= */
   const [user, setUser] = useState(null);
   const [movimientos, setMovimientos] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [confirmModal, setConfirmModal] = useState(null);
   const [nombre, setNombre] = useState("");
   const [monto, setMonto] = useState("");
-  const [tags, setTags] = useState([
-    "GNV ⛽",
-    "Comida 🍔",
-    "Diversión 🎮",
-    "Generé 💰",
-  ]);
+  const [tags, setTags] = useState(DEFAULT_TAGS);
   const [busqueda, setBusqueda] = useState("");
   const [vistaMensual, setVistaMensual] = useState(false);
   const [fechaFiltro, setFechaFiltro] = useState(
     new Date().toLocaleDateString("en-CA"),
   );
 
-  const showToast = (msg, type = "info") => {
+  const toastTimeoutRef = useRef(null);
+
+  const showToast = useCallback((msg, type = "info") => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 2500);
-  };
+    toastTimeoutRef.current = setTimeout(() => setToast(null), 2500);
+  }, []);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
-        const nickname = u.displayName || u.email.split("@")[0];
+        const nickname = u.displayName || u.email?.split("@")[0] || "Usuario";
         const yaSaludado = localStorage.getItem("saludo_realizado");
 
         if (!yaSaludado) {
-          showToast(`¡Bienvenido, ${nickname}! 👋`, "success");
+          showToast(`Bienvenido, ${nickname}`, "success");
           localStorage.setItem("saludo_realizado", "true");
         }
 
         try {
           const ref = doc(db, "config_usuarios", u.uid);
           const snap = await getDoc(ref);
-          if (snap.exists()) {
+          if (snap.exists() && snap.data().tags?.length) {
             setTags(snap.data().tags);
           }
         } catch (err) {
           console.error("Error al cargar tags:", err);
+          showToast("No se pudieron cargar tus favoritos", "info");
         }
       } else {
         setUser(null);
         setMovimientos([]);
+        setTags(DEFAULT_TAGS);
         localStorage.removeItem("saludo_realizado");
       }
       setLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     if (!user) return;
@@ -86,9 +85,12 @@ function App() {
       setMovimientos(
         data.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
       );
+    }, (err) => {
+      console.error("Error en listener de movimientos:", err);
+      showToast("Error al sincronizar movimientos", "error");
     });
     return () => unsub();
-  }, [user]);
+  }, [user, showToast]);
 
   const stats = useMemo(() => {
     const filtrados = movimientos.filter((m) => {
@@ -122,35 +124,47 @@ function App() {
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (err) {
-      console.error("Error detallado de Firebase:", err.code, err.message);
-
+      console.error("Error de login:", err.code, err.message);
       if (err.code === "auth/popup-closed-by-user") {
-        showToast("Inicio de sesión cancelado", "info");
+        showToast("Inicio de sesion cancelado", "info");
       } else if (err.code === "auth/cancelled-popup-request") {
         showToast("Ya hay una ventana de login abierta", "info");
       } else {
-        showToast("Error de conexión con Google", "error");
+        showToast("Error de conexion con Google", "error");
       }
     }
   };
-  const triggerConfirm = (message, onConfirm) =>
+
+  const triggerConfirm = useCallback((message, onConfirm) => {
     setConfirmModal({ message, onConfirm });
+  }, []);
+
   const handleLogout = () =>
-    triggerConfirm("¿Estás seguro de que quieres salir?", async () => {
-      await signOut(auth);
-      showToast("Sesión cerrada", "info");
+    triggerConfirm("Estas seguro de que quieres salir?", async () => {
+      try {
+        await signOut(auth);
+        showToast("Sesion cerrada", "info");
+      } catch {
+        showToast("Error al cerrar sesion", "error");
+      }
     });
 
   const registrar = async (tipo) => {
-    if (!nombre || !monto || !user) {
+    if (!nombre.trim() || !monto || !user) {
       showToast("Completa los campos", "error");
+      return;
+    }
+
+    const montoNum = parseFloat(monto);
+    if (isNaN(montoNum) || montoNum <= 0) {
+      showToast("Ingresa un monto valido", "error");
       return;
     }
 
     const nuevoMovimiento = {
       uid: user.uid,
       nombre: nombre.trim(),
-      monto: parseFloat(monto),
+      monto: montoNum,
       tipo,
       fecha: new Date().toLocaleDateString("en-CA"),
       hora: new Date().toLocaleTimeString([], {
@@ -164,18 +178,30 @@ function App() {
     setMonto("");
 
     if (navigator.onLine) {
-      showToast("¡Movimiento registrado! 🚀", "success");
+      showToast("Movimiento registrado!", "success");
     } else {
-      showToast("Guardado localmente (sin internet) 💾", "info");
+      showToast("Guardado localmente (sin internet)", "info");
     }
 
-    addDoc(collection(db, "movimientos"), nuevoMovimiento)
-      .then(() => {
-        console.log("Sincronizado con la nube ✅");
-      })
-      .catch((err) => {
-        console.error("Error silencioso (se reintentará):", err);
-      });
+    try {
+      await addDoc(collection(db, "movimientos"), nuevoMovimiento);
+    } catch (err) {
+      console.error("Error al guardar movimiento:", err);
+      showToast("Error al sincronizar. Se reintentara.", "error");
+    }
+  };
+
+  const eliminarMovimiento = async (movimiento) => {
+    if (movimiento.uid !== user?.uid) {
+      showToast("No tienes permiso para eliminar este movimiento", "error");
+      return;
+    }
+    try {
+      await deleteDoc(doc(db, "movimientos", movimiento.id));
+    } catch (err) {
+      console.error("Error al eliminar:", err);
+      showToast("Error al eliminar. Reintenta.", "error");
+    }
   };
 
   const editarTags = async () => {
@@ -185,13 +211,18 @@ function App() {
       .split(",")
       .map((t) => t.trim())
       .filter((t) => t !== "");
+    if (lista.length === 0) {
+      showToast("Debes tener al menos un favorito", "info");
+      return;
+    }
     setTags(lista);
     if (user) {
       try {
         await setDoc(doc(db, "config_usuarios", user.uid), { tags: lista });
         showToast("Favoritos actualizados", "success");
       } catch (err) {
-        console.error(err);
+        console.error("Error al guardar tags:", err);
+        showToast("Error al guardar favoritos", "error");
       }
     }
   };
@@ -219,7 +250,7 @@ function App() {
         if (m.fecha !== fechaActual) {
           rows.push([
             {
-              content: `TOTAL DEL DÍA (${fechaActual})`,
+              content: `TOTAL DEL DIA (${fechaActual})`,
               colSpan: 3,
               styles: { fillColor: [0, 209, 178], fontStyle: "bold" },
             },
@@ -242,7 +273,7 @@ function App() {
         if (index === stats.filtrados.length - 1) {
           rows.push([
             {
-              content: `TOTAL DEL DÍA (${m.fecha})`,
+              content: `TOTAL DEL DIA (${m.fecha})`,
               colSpan: 3,
               styles: { fillColor: [0, 209, 178], fontStyle: "bold" },
             },
@@ -276,8 +307,9 @@ function App() {
       });
       docPDF.save(`reporte_${fechaFiltro}.pdf`);
       showToast("PDF generado", "success");
-    } catch {
-      showToast("Error al iniciar sesión", "error");
+    } catch (err) {
+      console.error("Error al generar PDF:", err);
+      showToast("Error al generar el PDF", "error");
     }
   };
 
@@ -286,14 +318,13 @@ function App() {
   return (
     <div className="main-container">
       <div className="phone-screen">
-        {/* SESION HEADER */}
         <header className="app-header">
           <div className="header-left">
             <h2>Finanzas CHC</h2>
             <div className="date-select-container">
               <span className="date-label">Ver X Dias</span>
               <div className="date-select-wrapper">
-                <span className="calendar-mini-icon">📅</span>
+                <span className="calendar-mini-icon">&#128197;</span>
                 <input
                   className="mini-date-picker"
                   type={vistaMensual ? "month" : "date"}
@@ -313,8 +344,8 @@ function App() {
               </button>
             ) : (
               <img
-                src={user.photoURL}
-                alt="u"
+                src={user.photoURL || ""}
+                alt="avatar"
                 className="mini-avatar"
                 onClick={handleLogout}
               />
@@ -323,7 +354,7 @@ function App() {
             <div className="btn-wrapper">
               <span className="btn-label">PDF</span>
               <button className="btn-icon" onClick={exportarPDF}>
-                📄
+                &#128196;
               </button>
             </div>
 
@@ -332,19 +363,18 @@ function App() {
                 className="btn-label"
                 style={{ color: vistaMensual ? "#bb86fc" : "#00d1b2" }}
               >
-                {vistaMensual ? "Día" : "Mes"}
+                {vistaMensual ? "Dia" : "Mes"}
               </span>
               <button
                 className={`btn-icon ${vistaMensual ? "border-mes" : "border-dia"}`}
                 onClick={() => setVistaMensual(!vistaMensual)}
               >
-                {vistaMensual ? "☀️" : "🗓️"}
+                {vistaMensual ? "\u2600\uFE0F" : "\uD83D\uDCC5"}
               </button>
             </div>
           </div>
         </header>
 
-        {/* SESION DASHBOARD CARD */}
         <div className="main-card">
           <div
             className="circle-chart"
@@ -377,12 +407,11 @@ function App() {
           </div>
         </div>
 
-        {/* FORMULARIO DE REGISTRO */}
         <div className="input-section">
           <div className="quick-tags">
             {tags.map((t, i) => (
               <button
-                key={i}
+                key={`${t}-${i}`}
                 className="tag-btn"
                 onClick={() => setNombre(t)}
                 onContextMenu={(e) => {
@@ -394,7 +423,7 @@ function App() {
               </button>
             ))}
             <button className="tag-btn-edit" onClick={editarTags}>
-              ⚙️
+              &#9881;&#65039;
             </button>
           </div>
           <input
@@ -406,6 +435,8 @@ function App() {
             type="number"
             placeholder="Monto S/"
             value={monto}
+            min="0"
+            step="0.01"
             onChange={(e) => setMonto(e.target.value)}
           />
           <div className="btn-group-main">
@@ -413,22 +444,21 @@ function App() {
               className="btn-action in"
               onClick={() => registrar("ingreso")}
             >
-              💰 Ingreso
+              Ingreso
             </button>
             <button
               className="btn-action out"
               onClick={() => registrar("gasto")}
             >
-              💸 Gasto
+              Gasto
             </button>
           </div>
         </div>
 
-        {/* SESION HISTORIAL */}
         <div className="history-list">
           <input
             className="search-bar"
-            placeholder="🔍 Buscar..."
+            placeholder="Buscar..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
@@ -463,26 +493,30 @@ function App() {
                     <button
                       className="btn-delete"
                       onClick={() =>
-                        triggerConfirm("¿Eliminar este movimiento?", () =>
-                          deleteDoc(doc(db, "movimientos", m.id)),
+                        triggerConfirm("Eliminar este movimiento?", () =>
+                          eliminarMovimiento(m),
                         )
                       }
                     >
-                      ×
+                      &times;
                     </button>
                   </div>
                 </div>
               </React.Fragment>
             );
           })}
+          {stats.filtrados.length === 0 && (
+            <div className="empty-state">
+              <p>No hay movimientos para esta fecha</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/*SESION COMPONENTES FLOTANTES (Modales y Toasts) */}
       {confirmModal && (
-        <div className="overlay">
-          <div className="confirm-box">
-            <div className="icon-q">❓</div>
+        <div className="overlay" onClick={() => setConfirmModal(null)}>
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
+            <div className="icon-q">?</div>
             <p>{confirmModal.message}</p>
             <div className="confirm-btns">
               <button className="btn-c" onClick={() => setConfirmModal(null)}>
@@ -503,14 +537,14 @@ function App() {
       )}
 
       {toast && (
-        <div className="overlay">
+        <div className="toast-overlay">
           <div className={`toast-box ${toast.type}`}>
             <span>
               {toast.type === "success"
-                ? "✅"
+                ? "\u2705"
                 : toast.type === "error"
-                  ? "❌"
-                  : "ℹ️"}
+                  ? "\u274C"
+                  : "\u2139\uFE0F"}
             </span>
             <div className="toast-text">{toast.msg}</div>
           </div>
