@@ -7,13 +7,13 @@ import {
 } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+  apiKey: "AIzaSyC3IiIKb77nAe6LEJ_yXPiXk_poUOmBFqo",
+  authDomain: "finanzas-personales-bfefc.firebaseapp.com",
+  projectId: "finanzas-personales-bfefc",
+  storageBucket: "finanzas-personales-bfefc.firebasestorage.app",
+  messagingSenderId: "364064479158",
+  appId: "1:364064479158:web:e7aaed68777304be3a9317",
+  measurementId: "G-WFQQG87WMG"
 };
 
 const app = initializeApp(firebaseConfig);
