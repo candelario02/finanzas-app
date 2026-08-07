@@ -1,0 +1,92 @@
+.main-card {
+  background: var(--card-dark);
+  padding: 25px 15px;
+  border-radius: 30px;
+  text-align: center;
+}
+
+.circle-chart {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background 0.5s ease;
+  background: conic-gradient(
+    var(--error) 0deg var(--pGas),
+    var(--success) var(--pGas) calc(var(--pGas) + var(--pIng)),
+    var(--balance) calc(var(--pGas) + var(--pIng)) 360deg
+  );
+}
+
+.inner-circle {
+  width: 165px;
+  height: 165px;
+  background: var(--card-dark);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.chart-info p {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: bold;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chart-info span {
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 20px;
+  border-top: 1px solid #222;
+  padding-top: 15px;
+}
+
+.stat span {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.stat p {
+  margin: 0;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.txt-gasto {
+  color: var(--error);
+}
+
+@media (max-width: 360px) {
+  .main-card {
+    padding: 20px 12px;
+    border-radius: 24px;
+  }
+
+  .circle-chart {
+    width: 170px;
+    height: 170px;
+  }
+
+  .inner-circle {
+    width: 140px;
+    height: 140px;
+  }
+
+  .chart-info p {
+    font-size: 1.3rem;
+  }
+}

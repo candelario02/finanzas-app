@@ -1,0 +1,74 @@
+.input-section {
+  background: var(--card-dark);
+  padding: 20px;
+  border-radius: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quick-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.tag-btn {
+  padding: 7px 12px;
+  border-radius: 15px;
+  border: 1px solid #333;
+  background: #222;
+  color: white;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.tag-btn-edit {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.btn-group-main {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-action {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.btn-action.in {
+  background: var(--success);
+  color: black;
+}
+
+.btn-action.out {
+  background: var(--error);
+  color: white;
+}
+
+@media (max-width: 360px) {
+  .input-section {
+    padding: 15px;
+    border-radius: 20px;
+  }
+
+  .btn-action {
+    padding: 12px;
+    font-size: 0.85rem;
+  }
+
+  .tag-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+}

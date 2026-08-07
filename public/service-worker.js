@@ -1,67 +1,77 @@
-const CACHE_NAME = "finanzas-chc-v4";
+const CACHE_NAME = "finanzas-chc-v5";
+const PRECACHE = ["/", "/index.html", "/manifest.json", "/finanzasJEC.png"];
+
+function esApiFirebase(url) {
+  return [
+    "firebaseio.com",
+    "googleapis.com",
+    "firebasestorage.app",
+    "google.com",
+  ].some((dominio) => url.hostname.includes(dominio));
+}
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll([
-        "/",
-        "/index.html",
-        "/manifest.json",
-        "/finanzasJEC.png",
-      ]);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)),
   );
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (e) => {
   e.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
-        })
-      );
-    })
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key !== CACHE_NAME)
+            .map((key) => caches.delete(key)),
+        ),
+      ),
   );
   self.clients.claim();
 });
 
 self.addEventListener("fetch", (e) => {
-  const url = new URL(e.request.url);
+  const { request } = e;
+  const url = new URL(request.url);
 
-  if (url.hostname.includes("firebaseio.com") || url.hostname.includes("googleapis.com") || url.hostname.includes("google.com")) {
+  // No interceptar POST ni las llamadas a Firebase: el SDK de Firestore
+  // gestiona el modo offline con su propia cache persistente.
+  if (request.method !== "GET" || esApiFirebase(url)) return;
+
+  // Navegacion: network-first para que los nuevos deploys se vean al instante.
+  if (request.mode === "navigate") {
     e.respondWith(
-      fetch(e.request).catch(() => {
-        return new Response(JSON.stringify({ error: "Sin conexion" }), {
-          status: 503,
-          headers: { "Content-Type": "application/json" },
-        });
-      })
+      fetch(request)
+        .then((response) => {
+          const clone = response.clone();
+          caches
+            .open(CACHE_NAME)
+            .then((cache) => cache.put("/index.html", clone));
+          return response;
+        })
+        .catch(() => caches.match("/index.html")),
     );
     return;
   }
 
+  // Assets: cache-first con actualizacion en segundo plano.
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      const fetchPromise = fetch(e.request)
+    caches.match(request).then((cachedResponse) => {
+      const fetchPromise = fetch(request)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
+            const clone = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(e.request, responseClone);
+              cache.put(request, clone);
             });
           }
           return networkResponse;
         })
-        .catch(() => {
-          if (e.request.mode === "navigate") {
-            return caches.match("/index.html");
-          }
-          return cachedResponse;
-        });
+        .catch(() => cachedResponse);
 
       return cachedResponse || fetchPromise;
-    })
+    }),
   );
 });

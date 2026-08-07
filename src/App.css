@@ -7,12 +7,15 @@
   --accent: #bb86fc;
   --success: #00d1b2;
   --error: #ff4757;
+  --balance: #a29bfe;
   --text: #ffffff;
   --input-bg: #1a1a1a;
   --border: rgba(255, 255, 255, 0.1);
 }
 
-html, body, #root {
+html,
+body,
+#root {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -27,6 +30,21 @@ button {
   font-family: inherit;
 }
 
+input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #333;
+  background: var(--input-bg);
+  color: white;
+  box-sizing: border-box;
+  outline: none;
+}
+
+input:focus {
+  border-color: var(--accent);
+}
+
 /* ==========================================================================
    SESION PRINCIPAL
    ========================================================================== */
@@ -36,418 +54,6 @@ button {
   justify-content: center;
 }
 
-/* ==========================================================================
-   SESION HEADER
-   ========================================================================== */
-.app-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.header-left {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.header-left h2 {
-  margin: 0;
-  font-size: 1.2rem;
-}
-
-.header-btns {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.date-select-container {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.date-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  color: var(--accent);
-  font-weight: bold;
-  letter-spacing: 0.5px;
-}
-
-.date-select-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 5px 8px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  width: fit-content;
-}
-
-.calendar-mini-icon {
-  font-size: 0.85rem;
-  opacity: 0.7;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.mini-date-picker {
-  background: transparent;
-  border: none;
-  color: white;
-  font-size: 0.85rem;
-  font-weight: bold;
-  outline: none;
-  width: 110px;
-  padding: 2px 0;
-}
-
-.mini-date-picker::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-  opacity: 0;
-  position: absolute;
-  width: 100%;
-}
-
-.mini-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 2px solid var(--accent);
-  object-fit: cover;
-  cursor: pointer;
-}
-
-.btn-icon {
-  background: #1a1a1a;
-  border: none;
-  padding: 8px;
-  border-radius: 10px;
-  font-size: 1.1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* ==========================================================================
-   DASHBOARD CARD
-   ========================================================================== */
-.main-card {
-  background: var(--card-dark);
-  padding: 25px 15px;
-  border-radius: 30px;
-  text-align: center;
-}
-
-.circle-chart {
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  margin: 0 auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: background 0.5s ease;
-}
-
-.inner-circle {
-  width: 165px;
-  height: 165px;
-  background: var(--card-dark);
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.chart-info p {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: bold;
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.chart-info span {
-  font-size: 0.7rem;
-  opacity: 0.6;
-}
-
-.dashboard-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  margin-top: 20px;
-  border-top: 1px solid #222;
-  padding-top: 15px;
-}
-
-.stat span { font-size: 0.75rem; opacity: 0.7; display: block; margin-bottom: 4px; }
-.stat p { margin: 0; font-weight: bold; font-size: 0.9rem; }
-.txt-gasto { color: var(--error); }
-
-/* ==========================================================================
-   SESION DE FORMULARIO REGISTRO
-   ========================================================================== */
-.input-section {
-  background: var(--card-dark);
-  padding: 20px;
-  border-radius: 25px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-input {
-  width: 100%;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #333;
-  background: var(--input-bg);
-  color: white;
-  box-sizing: border-box;
-}
-
-.quick-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-}
-
-.tag-btn {
-  padding: 7px 12px;
-  border-radius: 15px;
-  border: 1px solid #333;
-  background: #222;
-  color: white;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.tag-btn-edit {
-  background: transparent;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-}
-
-.btn-group-main {
-  display: flex;
-  gap: 10px;
-}
-
-.btn-action {
-  flex: 1;
-  padding: 14px;
-  border-radius: 14px;
-  border: none;
-  font-weight: bold;
-  cursor: pointer;
-  font-size: 0.95rem;
-}
-
-.btn-action.in { background: var(--success); color: black; }
-.btn-action.out { background: var(--error); color: white; }
-
-/* ==========================================================================
-   SESION HISTORIAL
-   ========================================================================== */
-.history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.date-separator {
-  padding: 15px 5px 5px 5px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  color: var(--accent);
-  text-transform: capitalize;
-  border-bottom: 1px solid #222;
-}
-
-.history-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--card-dark);
-  padding: 10px 14px;
-  border-radius: 12px;
-  margin-top: 6px;
-}
-
-.item-info {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  min-width: 0;
-  flex: 1;
-}
-
-.item-info strong {
-  font-size: 0.9rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.item-meta {
-  display: flex;
-  gap: 8px;
-}
-
-.meta-date { font-size: 0.7rem; color: var(--success); font-weight: bold; }
-.meta-time { font-size: 0.7rem; opacity: 0.5; }
-
-.item-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  margin-left: 10px;
-}
-
-.item-amount { font-size: 0.9rem; font-weight: bold; white-space: nowrap; }
-.item-amount.ingreso { color: var(--success); }
-.item-amount.gasto { color: var(--error); }
-
-.btn-delete {
-  background: transparent;
-  border: none;
-  color: #666;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 4px;
-  line-height: 1;
-}
-
-.btn-delete:hover {
-  color: var(--error);
-}
-
-/* ==========================================================================
-   SESION COMPONENTES FLOTANTES (Modales y Toasts)
-   ========================================================================== */
-.overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 999;
-  animation: fadeIn 0.15s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.confirm-box {
-  background: #1e1e1e;
-  padding: 20px;
-  border-radius: 20px;
-  border: 1px solid #333;
-  text-align: center;
-  min-width: 250px;
-}
-
-.confirm-btns { display: flex; gap: 10px; margin-top: 15px; }
-.btn-c, .btn-a { flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
-.btn-c { background: #333; color: white; }
-.btn-a { background: var(--success); color: black; }
-
-.icon-q {
-  font-size: 2rem;
-  margin-bottom: 10px;
-}
-
-.toast-overlay {
-  position: fixed;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  pointer-events: none;
-}
-
-.toast-box {
-  background: #1e1e1e;
-  padding: 12px 20px;
-  border-radius: 14px;
-  border: 1px solid #333;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-}
-
-.toast-box.success { border-color: var(--success); }
-.toast-box.error { border-color: var(--error); }
-.toast-box.info { border-color: var(--accent); }
-
-.toast-text {
-  font-size: 0.85rem;
-}
-
-/* ==========================================================================
-   BOTONES DEL HEADER
-   ========================================================================== */
-.border-mes { border: 2px solid var(--accent) !important; background: rgba(187, 134, 252, 0.1) !important; }
-.border-dia { border: 2px solid var(--success) !important; background: rgba(0, 209, 178, 0.1) !important; }
-
-.btn-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; }
-.btn-label { position: absolute; top: -16px; font-size: 0.6rem; font-weight: bold; color: var(--accent); }
-
-.loading-screen {
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: var(--accent);
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.btn-login {
-  background: var(--accent);
-  color: #000;
-  border: none;
-  padding: 8px 20px;
-  border-radius: 12px;
-  font-weight: bold;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.btn-login:hover {
-  opacity: 0.85;
-}
-
-.btn-login:active {
-  transform: scale(0.96);
-}
-
-.empty-state {
-  text-align: center;
-  padding: 40px 20px;
-  color: #555;
-  font-size: 0.9rem;
-}
-
-/* ==========================================================================
-   PHONE SCREEN - CONTENEDOR PRINCIPAL
-   ========================================================================== */
 .phone-screen {
   width: 100%;
   max-width: 380px;
@@ -459,6 +65,16 @@ input {
   box-sizing: border-box;
 }
 
+.loading-screen {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--accent);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
 /* ==========================================================================
    RESPONSIVE - CELULARES PEQUENOS (<360px)
    ========================================================================== */
@@ -467,103 +83,10 @@ input {
     padding: 10px;
     gap: 12px;
   }
-
-  .app-header {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .header-btns {
-    gap: 8px;
-  }
-
-  .header-left h2 {
-    font-size: 1.05rem;
-  }
-
-  .main-card {
-    padding: 20px 12px;
-    border-radius: 24px;
-  }
-
-  .circle-chart {
-    width: 170px;
-    height: 170px;
-  }
-
-  .inner-circle {
-    width: 140px;
-    height: 140px;
-  }
-
-  .chart-info p {
-    font-size: 1.3rem;
-  }
-
-  .input-section {
-    padding: 15px;
-    border-radius: 20px;
-  }
-
-  .btn-action {
-    padding: 12px;
-    font-size: 0.85rem;
-  }
-
-  .tag-btn {
-    padding: 6px 10px;
-    font-size: 0.8rem;
-  }
-
-  .history-item {
-    padding: 8px 10px;
-  }
-
-  .item-info strong {
-    font-size: 0.85rem;
-  }
-
-  .item-amount {
-    font-size: 0.8rem;
-  }
-
-  .btn-label {
-    font-size: 0.55rem;
-    top: -14px;
-  }
-
-  .btn-icon {
-    padding: 6px;
-    font-size: 1rem;
-  }
-
-  .mini-avatar {
-    width: 30px;
-    height: 30px;
-  }
-
-  .date-select-wrapper {
-    padding: 4px 6px;
-  }
-
-  .mini-date-picker {
-    width: 95px;
-    font-size: 0.8rem;
-  }
-
-  .confirm-box {
-    min-width: 220px;
-    margin: 0 15px;
-  }
-
-  .toast-box {
-    padding: 10px 16px;
-    font-size: 0.8rem;
-  }
 }
 
 /* ==========================================================================
-   RESPONSIVE - PANTALLAS medianas (tablet landscape, etc.)
+   RESPONSIVE - PANTALLAS MEDIANAS (361px - 480px)
    ========================================================================== */
 @media (min-width: 361px) and (max-width: 480px) {
   .phone-screen {

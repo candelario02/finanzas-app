@@ -7,13 +7,13 @@ import {
 } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyC3IiIKb77nAe6LEJ_yXPiXk_poUOmBFqo",
-  authDomain: "finanzas-personales-bfefc.firebaseapp.com",
-  projectId: "finanzas-personales-bfefc",
-  storageBucket: "finanzas-personales-bfefc.firebasestorage.app",
-  messagingSenderId: "364064479158",
-  appId: "1:364064479158:web:e7aaed68777304be3a9317",
-  measurementId: "G-WFQQG87WMG"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyC3IiIKb77nAe6LEJ_yXPiXk_poUOmBFqo",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "finanzas-personales-bfefc.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "finanzas-personales-bfefc",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "finanzas-personales-bfefc.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "364064479158",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:364064479158:web:e7aaed68777304be3a9317",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-WFQQG87WMG"
 };
 
 const app = initializeApp(firebaseConfig);
