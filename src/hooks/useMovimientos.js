@@ -31,9 +31,7 @@ export function useMovimientos(user, showToast) {
       q,
       (snap) => {
         const data = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
-        setMovimientos(
-          data.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
-        );
+        setMovimientos(data.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
       },
       (err) => {
         console.error("Error en listener de movimientos:", err);
@@ -56,7 +54,9 @@ export function useMovimientos(user, showToast) {
         return false;
       }
 
+      const tempId = `temp-${Date.now()}`;
       const nuevoMovimiento = {
+        id: tempId,
         uid: user.uid,
         nombre: nombre.trim(),
         monto: montoNum,
@@ -66,13 +66,17 @@ export function useMovimientos(user, showToast) {
         createdAt: Date.now(),
       };
 
+      setMovimientos((prev) => [nuevoMovimiento, ...prev]);
+
       try {
-        await addDoc(collection(db, "movimientos"), nuevoMovimiento);
+        const { id: _omit, ...datosFirestore } = nuevoMovimiento;
+        await addDoc(collection(db, "movimientos"), datosFirestore);
         showToast("Movimiento registrado!", "success");
         return true;
       } catch (err) {
         console.error("Error al guardar movimiento:", err);
         showToast("Error al sincronizar. Se reintentara.", "error");
+        setMovimientos((prev) => prev.filter((m) => m.id !== tempId));
         return false;
       }
     },

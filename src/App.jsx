@@ -16,7 +16,7 @@ import { fechaInputHoy, mesActual } from "./utils/format";
 
 function App() {
   const { toast, showToast } = useToast();
-  const { user, loading, login, logout } = useAuth(showToast);
+  const { user, authReady, login, logout } = useAuth(showToast);
   const { tags, guardarTags } = useTags(user, showToast);
   const { movimientos, registrar, eliminar } = useMovimientos(user, showToast);
 
@@ -83,9 +83,11 @@ function App() {
     setTagEditorOpen(false);
   };
 
-  if (loading) return <div className="loading-screen">Sincronizando...</div>;
+if (!authReady && !user) {
+  return <div className="loading-screen">Sincronizando...</div>;
+}
 
-  return (
+return (
     <div className="main-container">
       <div className="phone-screen">
         <Header

@@ -4,9 +4,11 @@ import { auth, googleProvider } from "../firebase";
 
 export function useAuth(showToast) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
+    const timer = setTimeout(() => setAuthReady(true), 1000);
+
     const unsub = onAuthStateChanged(auth, (u) => {
       if (u) {
         setUser(u);
@@ -19,9 +21,11 @@ export function useAuth(showToast) {
         setUser(null);
         localStorage.removeItem("saludo_realizado");
       }
-      setLoading(false);
     });
-    return () => unsub();
+    return () => {
+      clearTimeout(timer);
+      unsub();
+    };
   }, [showToast]);
 
   const login = useCallback(async () => {
@@ -48,5 +52,5 @@ export function useAuth(showToast) {
     }
   }, [showToast]);
 
-  return { user, loading, login, logout };
+  return { user, authReady, login, logout };
 }
