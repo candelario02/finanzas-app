@@ -2,6 +2,14 @@
 
 Aplicación **PWA** de finanzas personales para controlar ingresos y gastos del día a día, con sincronización en tiempo real, soporte offline y exportación a PDF.
 
+## 🔧 Mejoras recientes
+
+- ⚡ Carga de la app más rápida al iniciar: eliminado el `setTimeout` artificial de 1 segundo en `useAuth.js`; ahora `authReady` se marca tan pronto como Firebase responde.
+- ⚡ Registro de movimientos sin bloqueo: `useMovimientos.js` muestra el movimiento en la UI inmediatamente (optimistic update) mientras Firestore sincroniza en segundo plano.
+- 🛡️ Listener de Firestore optimizado: `orderBy("createdAt", "desc")` + `limit(50)` para no escuchar toda la colección.
+- 📜 Scroll vertical interno en el historial diario: `.history-list` tiene `height: 300px` y `overflow-y: auto` para evitar scroll horizontal en pantallas pequeñas.
+- 🗑️ Código limpio: eliminado código duplicado y bloques de comentario sin uso.
+
 ## ✨ Funcionalidades
 
 - 🔐 Login con **Google** (cada usuario ve solo sus propios datos)
@@ -51,6 +59,18 @@ src/
 ├── firebase.js        # Config de Firebase
 └── main.jsx           # Punto de entrada + registro SW
 ```
+
+## 🏗️ Arquitectura (MVVM)
+
+| Capa | Archivos | Responsabilidad |
+|------|----------|-----------------|
+| **Vista** | `components/*.jsx` | UI reactiva, se re-renderizan al cambiar estado |
+| **Modelo de Vista** | `hooks/use*.js` | Conectan vista y modelo; suscripciones a Firestore (`onSnapshot`), estado local, lógica de negocio |
+| **Modelo** | `utils/*.js`, `firebase.js` | Cálculos puros, formato, acceso a base de datos |
+
+Flujo de datos: `App.jsx` → hooks (`useAuth`, `useMovimientos`, `useTags`) → Firestore (tiempo real) → componentes UI.
+
+Patrón: **MVVM (Modelo-Vista-Modelo de Vista)** adaptado a React con hooks en lugar de observadores clásicos.
 
 ## 🚀 Puesta en marcha
 
