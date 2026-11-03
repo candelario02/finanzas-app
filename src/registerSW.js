@@ -8,6 +8,7 @@ export function registerSW() {
             "SW registrado con éxito en el alcance:",
             registration.scope,
           );
+          registration.update().catch(() => {});
         })
         .catch((error) => {
           console.error("Fallo el registro del SW:", error);

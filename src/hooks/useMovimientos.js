@@ -7,8 +7,6 @@ import {
   onSnapshot,
   query,
   where,
-  orderBy,
-  limit,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { fechaInputHoy, horaActual } from "../utils/format";
@@ -28,13 +26,13 @@ export function useMovimientos(user, showToast) {
     const q = query(
       collection(db, "movimientos"),
       where("uid", "==", user.uid),
-      orderBy("createdAt", "desc"),
-      limit(50),
     );
     const unsub = onSnapshot(
       q,
       (snap) => {
-        const data = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
+        const data = snap.docs
+          .map((d) => ({ ...d.data(), id: d.id }))
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         setMovimientos(data);
       },
       (err) => {
