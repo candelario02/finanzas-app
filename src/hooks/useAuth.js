@@ -7,9 +7,8 @@ export function useAuth(showToast) {
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setAuthReady(true), 1000);
-
     const unsub = onAuthStateChanged(auth, (u) => {
+      setAuthReady(true);
       if (u) {
         setUser(u);
         const nickname = u.displayName || u.email?.split("@")[0] || "Usuario";
@@ -22,10 +21,7 @@ export function useAuth(showToast) {
         localStorage.removeItem("saludo_realizado");
       }
     });
-    return () => {
-      clearTimeout(timer);
-      unsub();
-    };
+    return () => unsub();
   }, [showToast]);
 
   const login = useCallback(async () => {
