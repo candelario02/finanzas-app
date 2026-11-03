@@ -1,16 +1,32 @@
 {
+  "id": "/",
   "short_name": "Finanzas CHC",
   "name": "Finanzas Personales CHC",
+  "description": "Control de ingresos y gastos personales",
   "icons": [
     {
-      "src": "finanzasJEC.png",
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "theme_color": "#000000",
   "background_color": "#000000",
   "lang": "es"

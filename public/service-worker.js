@@ -1,5 +1,13 @@
-const CACHE_NAME = "finanzas-chc-v6";
-const PRECACHE = ["/", "/index.html", "/manifest.json", "/finanzasJEC.png"];
+const CACHE_NAME = "finanzas-chc-v7";
+const PRECACHE = [
+  "/",
+  "/index.html",
+  "/manifest.json",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/icon-maskable-512.png",
+  "/apple-touch-icon.png",
+];
 
 function esApiFirebase(url) {
   return [
