@@ -9,6 +9,8 @@ export default function Header({
   onToggleVista,
   onFechaChange,
   onExportPDF,
+  canInstall,
+  onInstall,
 }) {
   return (
     <header className="app-header">
@@ -29,6 +31,12 @@ export default function Header({
       </div>
 
       <div className="header-btns">
+        {canInstall && (
+          <button className="btn-install" onClick={onInstall}>
+            Instalar
+          </button>
+        )}
+
         {!user ? (
           <button className="btn-login" onClick={onLogin}>
             Login

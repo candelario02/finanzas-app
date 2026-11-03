@@ -137,6 +137,26 @@
   transition: opacity 0.2s;
 }
 
+.btn-install {
+  background: var(--success);
+  color: #000;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-install:hover {
+  opacity: 0.85;
+}
+
+.btn-install:active {
+  transform: scale(0.96);
+}
+
 .btn-login:hover {
   opacity: 0.85;
 }

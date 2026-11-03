@@ -11,6 +11,7 @@ import { useToast } from "./hooks/useToast";
 import { useAuth } from "./hooks/useAuth";
 import { useTags } from "./hooks/useTags";
 import { useMovimientos } from "./hooks/useMovimientos";
+import { useInstallPrompt } from "./hooks/useInstallPrompt";
 import { calcularStats } from "./utils/stats";
 import { fechaInputHoy, mesActual } from "./utils/format";
 
@@ -19,6 +20,7 @@ function App() {
   const { user, authReady, login, logout } = useAuth(showToast);
   const { tags, guardarTags } = useTags(user, showToast);
   const { movimientos, registrar, eliminar } = useMovimientos(user, showToast);
+  const { canInstall, promptInstall } = useInstallPrompt();
 
   const [vistaMensual, setVistaMensual] = useState(false);
   const [fechaDia, setFechaDia] = useState(fechaInputHoy);
@@ -67,6 +69,11 @@ function App() {
   const handleLogout = () =>
     triggerConfirm("Estas seguro de que quieres salir?", logout);
 
+  const handleInstall = async () => {
+    const ok = await promptInstall();
+    if (ok) showToast("App instalada!", "success");
+  };
+
   const handleDelete = (movimiento) =>
     triggerConfirm("Eliminar este movimiento?", () => eliminar(movimiento));
 
@@ -99,6 +106,8 @@ return (
           onToggleVista={() => setVistaMensual((v) => !v)}
           onFechaChange={handleFechaChange}
           onExportPDF={handleExportPDF}
+          canInstall={canInstall}
+          onInstall={handleInstall}
         />
 
         <DashboardCard stats={stats} vistaMensual={vistaMensual} />
