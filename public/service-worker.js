@@ -1,4 +1,4 @@
-const CACHE_NAME = "finanzas-chc-v5";
+const CACHE_NAME = "finanzas-chc-v6";
 const PRECACHE = ["/", "/index.html", "/manifest.json", "/finanzasJEC.png"];
 
 function esApiFirebase(url) {
@@ -35,6 +35,10 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const { request } = e;
   const url = new URL(request.url);
+
+  // El Cache API solo soporta http/https. Ignorar otros esquemas
+  // (chrome-extension://, etc.) para evitar errores al hacer cache.put.
+  if (url.protocol !== "http:" && url.protocol !== "https:") return;
 
   // No interceptar POST ni las llamadas a Firebase: el SDK de Firestore
   // gestiona el modo offline con su propia cache persistente.

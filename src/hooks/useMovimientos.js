@@ -6,6 +6,7 @@ import {
   doc,
   onSnapshot,
   query,
+  where,
   orderBy,
   limit,
 } from "firebase/firestore";
